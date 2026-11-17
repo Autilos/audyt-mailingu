@@ -55,6 +55,8 @@ class ML:
         url = sciezka if sciezka.startswith("https://") else API + sciezka
         if params:
             url += ("&" if "?" in url else "?") + urllib.parse.urlencode(params, safe="[]")
+        if not url.startswith(API + "/"):
+            sys.exit(f"Nieoczekiwany adres spoza API MailerLite — przerwano, token nie zostanie wysłany ({url.split('?')[0]}).")
         for proba in range(5):
             time.sleep(PRZERWA)
             self.zapytan += 1
@@ -72,7 +74,10 @@ class ML:
                 raise
             except urllib.error.HTTPError as e:
                 if e.code == 429:
-                    czekaj = int(e.headers.get("Retry-After") or 60)
+                    try:
+                        czekaj = int(e.headers.get("Retry-After") or 60)
+                    except ValueError:
+                        czekaj = 60
                     print(f"  limit zapytań — czekam {czekaj} s", file=sys.stderr)
                     time.sleep(min(czekaj, 300))
                     continue
@@ -85,7 +90,7 @@ class ML:
                 if e.code >= 500 and proba < 4:
                     time.sleep(3 * (proba + 1))
                     continue
-                raise
+                sys.exit(f"API MailerLite zwróciło błąd {e.code} dla {sciezka.split('?')[0]} — przerwano.")
             except urllib.error.URLError:
                 if proba < 4:
                     time.sleep(3 * (proba + 1))
@@ -98,7 +103,9 @@ class ML:
         p = dict(params or {}, limit=100)
         for strona in range(1, max_stron + 1):
             d = self.get(nastepna) if nastepna else self.get(sciezka, p)
-            if not d:
+            if not isinstance(d, dict):
+                if strona > 1:
+                    self.ostrzezenia.append(f"{sciezka}: kolejna strona niedostępna — dane mogą być niepełne.")
                 break
             wynik += d.get("data") or []
             nastepna = (d.get("links") or {}).get("next")
@@ -120,8 +127,15 @@ def stawka(s, klucz):
     """MailerLite podaje stawki jako {"float": 0.12, "string": "12%"} — zwraca procent."""
     v = (s or {}).get(klucz)
     if isinstance(v, dict):
-        v = v.get("float")
-    return None if v is None else round(100.0 * liczba(v), 2)
+        v = v.get("float") if v.get("float") is not None else v.get("string")
+    if v is None:
+        return None
+    if isinstance(v, str):
+        try:
+            return round(float(v.strip().rstrip("%").replace(",", ".")), 2)
+        except ValueError:
+            return None
+    return round(100.0 * liczba(v), 2)
 
 
 def czysc(t):
@@ -206,19 +220,25 @@ def main():
     D["sklepy"] = []
     for s in ml.wszystkie("/ecommerce/shops"):
         n = suma = przyp = 0
+        statusy = {}
         for o in ml.wszystkie(f"/ecommerce/shops/{s['id']}/orders"):
             kiedy = str(o.get("completed_at") or o.get("created_at") or "")[:10]
             if kiedy and kiedy < od:
                 continue
-            if (o.get("status") or "") not in ("", "complete", "completed"):
+            st = o.get("status") or "brak"
+            statusy[st] = statusy.get(st, 0) + 1
+            if st not in ("brak", "complete", "completed"):
                 continue
             n += 1
             suma += liczba(o.get("total_price"))
-            przyp += 1 if o.get("attribution") else 0
-        D["sklepy"].append({"nazwa": s.get("name"), "platforma": s.get("platform"), "wlaczony": s.get("enabled"),
+            at = o.get("attribution")
+            if isinstance(at, dict) and isinstance(at.get("attribution"), dict):
+                at = at["attribution"]
+            przyp += 1 if isinstance(at, dict) and at.get("email_id") else 0
+        D["sklepy"].append({"nazwa": czysc(s.get("name")) or "—", "platforma": s.get("platform"), "wlaczony": s.get("enabled"),
                             "wewnetrzny": bool(s.get("internal")),  # sklep MailerLite zakładany automatycznie
                             "waluta": s.get("currency"), "zamowienia": n, "suma": round(suma, 2),
-                            "przypisane_do_maili": przyp})
+                            "przypisane_do_maili": przyp, "statusy": statusy})
 
     print("3/5 automatyzacje…", file=sys.stderr)
     D["automaty"] = []
@@ -234,7 +254,9 @@ def main():
             uwagi.append("niedokończony")
         for w in x.get("warnings") or []:
             uwagi.append("ostrzeżenie: " + czysc(w if isinstance(w, str) else json.dumps(w, ensure_ascii=False))[:80])
-        if x.get("enabled") and zak + kol + wys == 0:
+        if not x.get("stats"):
+            uwagi.append("API nie podało statystyk")
+        elif x.get("enabled") and zak + kol + wys == 0:
             mlody = utw and (dzis - dt.date.fromisoformat(utw)).days < 14
             uwagi.append("włączony < 14 dni, za wcześnie na ocenę" if mlody else "włączony, ale nikt do niego nie wszedł")
         sklep_jest = any(s["wlaczony"] and not s["wewnetrzny"] for s in D["sklepy"])
@@ -255,7 +277,7 @@ def main():
             if k.get("broken"):
                 m["problemy"].append("mail zepsuty")
             maile.append(m)
-        D["automaty"].append({"nazwa": x.get("name"), "wlaczony": bool(x.get("enabled")), "utworzony": utw,
+        D["automaty"].append({"nazwa": czysc(x.get("name")) or "—", "wlaczony": bool(x.get("enabled")), "utworzony": utw,
                               "wyzwalacze": [t.get("type") for t in x.get("triggers") or []],
                               "kategoria": kategoria(x), "zakonczyli": zak, "w_kolejce": kol, "wyslane": wys,
                               "klikniecia_proc": stawka(st, "click_rate"), "wypisy_proc": stawka(st, "unsubscribe_rate"),
@@ -263,9 +285,13 @@ def main():
 
     print(f"4/5 kampanie z {a.dni} dni…", file=sys.stderr)
     D["kampanie"] = []
+    D["kampanie_bez_daty"] = 0
     for c in ml.wszystkie("/campaigns", {"filter[status]": "sent"}):
         kiedy = str(c.get("finished_at") or c.get("started_at") or c.get("scheduled_for") or "")[:10]
-        if not kiedy or kiedy < od:
+        if not kiedy:
+            D["kampanie_bez_daty"] += 1
+            continue
+        if kiedy < od:
             continue
         e = (c.get("emails") or [{}])[0]
         m = wyniki_maila(e.get("stats"))
@@ -298,6 +324,10 @@ def main():
         with open(a.json, "w", encoding="utf-8") as plik:
             json.dump(D, plik, ensure_ascii=False, indent=1)
     print(f"Gotowe: {a.raport} ({ml.zapytan} zapytań do API)", file=sys.stderr)
+
+
+def tn(x):
+    return "nieznane" if x is None else ("tak" if x else "nie")
 
 
 def odm(n, jeden, kilka, wiele):
@@ -338,7 +368,7 @@ def raport(D):
         naj.append(f"{len(martwe)} {odm(len(martwe), 'automat jest włączony', 'automaty są włączone', 'automatów jest włączonych')}, ale nikt do {odm(len(martwe), 'niego', 'nich', 'nich')} nie wszedł — sprawdź wyzwalacz.")
     sklepy_wl = [s for s in D["sklepy"] if s["wlaczony"] and not s["wewnetrzny"]]
     if not sklepy_wl:
-        naj.append("Do MailerLite nie jest podłączony żaden zewnętrzny sklep — porzucony koszyk, przypomnienie o ponownym zakupie i liczenie sprzedaży z maili nie mają danych. "
+        naj.append("API nie pokazuje żadnego podłączonego zewnętrznego sklepu — porzucony koszyk, przypomnienie o ponownym zakupie i liczenie sprzedaży z maili nie mają danych. "
                    "Jeśli masz sklep (np. WooCommerce, Shopify), podłącz go w MailerLite: Integracje → e-commerce.")
     for s in sklepy_wl:
         if s["zamowienia"] == 0:
@@ -348,7 +378,7 @@ def raport(D):
         naj.append("Nowe kampanie mają domyślnie wyłączone liczenie sprzedaży — nie wiesz, ile zarabia każdy newsletter. Włącz w ustawieniach e-commerce.")
     kp = D["kampanie"]
     n_tyg = len(kp) / (D["okno_dni"] / 7)
-    if not kp:
+    if not kp and not D.get("kampanie_bez_daty"):
         naj.append(f"W ostatnich {D['okno_dni']} dniach nie wyszła żadna kampania (newsletter).")
     elif n_tyg > 3:
         naj.append(f"Kampanie: średnio {n_tyg:.1f} tygodniowo — ryzyko zmęczenia bazy.".replace(".", ",", 1))
@@ -380,12 +410,15 @@ def raport(D):
             L.append(f"| {x['wyslany']} | {x['temat']} | {zl(x['wyslane'])} | {f(x['klikniecia_proc'])} | {f(x['wypisy_proc'])} | {', '.join(x['problemy'] + ([] if x['sledzi_sprzedaz'] else ['bez liczenia sprzedaży']))} |")
     else:
         L.append("Brak wysłanych kampanii w tym okresie.")
+    if D.get("kampanie_bez_daty"):
+        L.append(f"Uwaga: {D['kampanie_bez_daty']} wysłanych kampanii nie ma daty w API — pominięte w zestawieniu.")
     L += [""]
 
     L += ["## Sklep i liczenie sprzedaży", "",
-          f"- Liczenie sprzedaży w nowych kampaniach: **{'tak' if u.get('sledzenie_kampanie') else 'nie'}**, w nowych automatach: **{'tak' if u.get('sledzenie_automaty') else 'nie'}**, okno przypisania: {u.get('okno_przypisania_dni') or '—'} dni po kliknięciu."]
+          f"- Liczenie sprzedaży w nowych kampaniach: **{tn(u.get('sledzenie_kampanie'))}**, w nowych automatach: **{tn(u.get('sledzenie_automaty'))}**, okno przypisania: {u.get('okno_przypisania_dni') or '—'} dni po kliknięciu."]
     for s in D["sklepy"]:
-        L.append(f"- Sklep „{s['nazwa']}” ({'wewnętrzny sklep MailerLite' if s['wewnetrzny'] else s['platforma']}, {'włączony' if s['wlaczony'] else 'wyłączony'}): {zl(s['zamowienia'])} {odm(s['zamowienia'], 'zamówienie', 'zamówienia', 'zamówień')} na {zl(s['suma'])} {s['waluta'] or ''} w oknie, z tego przypisanych do maili: {zl(s['przypisane_do_maili'])}.")
+        L.append(f"- Sklep „{s['nazwa']}” ({'wewnętrzny sklep MailerLite' if s['wewnetrzny'] else s['platforma']}, {'włączony' if s['wlaczony'] else 'wyłączony'}): {zl(s['zamowienia'])} {odm(s['zamowienia'], 'zamówienie', 'zamówienia', 'zamówień')} na {zl(s['suma'])} {s['waluta'] or ''} w oknie, z tego przypisanych do maili: {zl(s['przypisane_do_maili'])}."
+                 + (f" Statusy zamówień w oknie: {', '.join(f'{k} {v}' for k, v in s['statusy'].items())} (do sprzedaży liczone tylko zakończone)." if s.get("statusy") else ""))
     if not D["sklepy"]:
         L.append("- Brak podłączonego sklepu.")
     L += ["", "## Czego ten audyt nie widzi", "",

@@ -10,7 +10,7 @@ Skill czyta konto MailerLite przez oficjalne API (nowy MailerLite, konta od 22.0
 ## Krok 1 — token API
 
 1. Token: MailerLite → **Integracje → MailerLite API → Wygeneruj nowy token**.
-2. Uprzedź wprost: **token MailerLite daje pełny dostęp do konta** (w dokumentacji API, stan na listopad 2026, nie ma tokenów ograniczonych do odczytu). Skill tylko czyta; po audycie token można usunąć w tym samym miejscu. Przy tworzeniu tokenu można ograniczyć go do adresu IP.
+2. Uprzedź wprost: **token MailerLite daje pełny dostęp do konta** (nie znalazłem w dokumentacji API, stan na listopad 2026, tokenów ograniczonych do odczytu). Skill tylko czyta; po audycie token można usunąć w tym samym miejscu. Przy tworzeniu tokenu można ograniczyć go do adresu IP.
 3. Ustaw jako zmienną środowiskową — **nie wklejaj tokenu do czatu**:
    ```bash
    export MAILERLITE_API_KEY='…'
