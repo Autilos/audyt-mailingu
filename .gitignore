@@ -1,0 +1,4 @@
+audyt-*.md
+*.json.tmp
+__pycache__/
+.env

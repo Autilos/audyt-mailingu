@@ -1,0 +1,14 @@
+{
+  "name": "audyt-mailingu",
+  "owner": {
+    "name": "Wojciech Nowak"
+  },
+  "plugins": [
+    {
+      "name": "audyt-mailingu",
+      "source": "./",
+      "description": "Audyt e-mail marketingu sklepu internetowego — tylko odczyt"
+    }
+  ],
+  "description": "Audyt e-mail marketingu sklepów internetowych — tylko odczyt, raport po polsku"
+}
