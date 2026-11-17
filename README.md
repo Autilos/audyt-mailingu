@@ -11,16 +11,16 @@ Skill do Claude Code, który w kilka minut sprawdza e-mail marketing Twojego skl
 - Wyniki każdego maila: otwarcia i kliknięcia bez botów, wypisy, skargi na spam, odbicia.
 - Jak często wysyłasz newslettery i czy nie męczysz bazy.
 - Czy sklep w ogóle przesyła zamówienia do systemu mailingowego i ilu kupujących nie trafia do bazy.
-- Czy maile mają włączone liczenie przychodu.
+- Czy maile mają włączone śledzenie e-commerce (przypisywanie sprzedaży do maila).
 
 Wynik: raport po polsku z listą najważniejszych problemów na górze.
 
 ## Bezpieczeństwo
 
 - **Tylko odczyt.** Skrypt wysyła wyłącznie zapytania GET — niczego nie zmienia, nie wysyła maili, nie kasuje kontaktów. Kod jest krótki i jawny: [`skills/audyt-getresponse/scripts/audyt_getresponse.py`](skills/audyt-getresponse/scripts/audyt_getresponse.py).
-- **Bez danych osobowych.** Raport zawiera tylko liczby zbiorcze, żadnych adresów e-mail ani nazwisk.
+- **Bez danych kontaktów.** Skrypt nie pobiera adresów e-mail ani danych subskrybentów — raport ma liczby zbiorcze oraz nazwy automatów, list i tematy maili z Twojego konta.
 - **Klucz zostaje u Ciebie.** Skrypt czyta klucz ze zmiennej środowiskowej na Twoim komputerze i łączy się bezpośrednio z API GetResponse.
-- Klucz API GetResponse daje pełny dostęp do konta (GetResponse nie ma kluczy tylko do odczytu). Po audycie możesz go usunąć.
+- Klucz API GetResponse daje pełny dostęp do konta (dokumentacja nie przewiduje kluczy tylko do odczytu). Po audycie możesz go usunąć.
 
 ## Instalacja w Claude Code
 

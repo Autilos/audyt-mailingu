@@ -35,11 +35,11 @@ MAX_STRON_ZAMOWIEN = 120  # 120 × 500 zamówień — bezpiecznik dla bardzo du�
 # Automaty, które powinien mieć sklep internetowy. Wykrywane po NAZWIE automatu i tematach maili —
 # API GetResponse nie pokazuje warunków ani wyzwalaczy automatu, więc „nie znaleziono” = sprawdź w panelu.
 LISTA_KONTROLNA = [
-    ("Powitanie nowego subskrybenta", ["powital", "powitan", "welcome", "witaj", "zapis", "onboard"]),
+    ("Powitanie nowego subskrybenta", ["powital", "powitan", "welcome", "witaj", "po zapisie", "za zapis", "nowy subskrybent", "onboard"]),
     ("Porzucony koszyk", ["koszyk", "cart", "porzuc"]),
     ("Po zakupie (podziękowanie, opinia, cross-sell)", ["po zakup", "post-purchase", "postpurchase", "dziękujemy za zakup", "dziękujemy za zamówienie", "jak się nosi", "jak sie nosi", "opini", "recenz"]),
-    ("Porzucone przeglądanie (oglądał produkt, nie dodał do koszyka)", ["przegląd", "przeglad", "odwiedz", "browse", "oglądał", "ogladal", "visited"]),
-    ("Drugi / ponowny zakup (przypomnienie o uzupełnieniu)", ["ponown", "drugi zakup", "drugie zamów", "drugi zapach", "kolejne zamów", "kolejny zakup", "dni po 1", "po pierwszym zakup", "replenish", "uzupełn", "uzupeln", "kończy się", "konczy sie", "dokup"]),
+    ("Porzucone przeglądanie (oglądał produkt, nie dodał do koszyka)", ["porzucone przegląd", "porzucone przeglad", "przeglądał", "przegladal", "oglądany produkt", "ogladany produkt", "odwiedzony produkt", "odwiedzone produkty", "browse abandon", "browse", "oglądał", "ogladal"]),
+    ("Drugi / ponowny zakup (przypomnienie o uzupełnieniu)", ["ponown", "drugi zakup", "drugie zamów", "drugi zapach", "kolejne zamów", "kolejny zakup", "po 1. zakup", "po pierwszym zakup", "replenish", "uzupełn", "uzupeln", "dokup"]),
     ("Reaktywacja nieaktywnych klientów (win-back)", ["reaktyw", "win-back", "winback", "tęsknimy", "tesknimy", "wróć do nas", "wroc do nas", "dawno cię", "dawno cie", "dawno nie"]),
 ]
 
@@ -51,6 +51,8 @@ class GR:
         if max_domena:
             self.h["X-Domain"] = max_domena
         self.zapytan = 0
+        self.niedostepne = []  # endpointy z 404 — funkcja niedostępna na koncie/planie
+        self.ostrzezenia = []
 
     def get(self, sciezka, params=None):
         url = self.api + sciezka
@@ -61,7 +63,11 @@ class GR:
             self.zapytan += 1
             try:
                 r = urllib.request.urlopen(urllib.request.Request(url, headers=self.h), timeout=240)
-                return json.loads(r.read() or b"null"), {k.lower(): v for k, v in r.headers.items()}
+                surowe = r.read() or b"null"
+                try:
+                    return json.loads(surowe), {k.lower(): v for k, v in r.headers.items()}
+                except ValueError:
+                    sys.exit(f"API zwróciło odpowiedź, która nie jest JSON-em ({sciezka}). Sprawdź adres --api i połączenie (proxy, zapora).")
             except (socket.timeout, TimeoutError, http.client.IncompleteRead, ConnectionError):
                 if proba < 4:
                     print("  serwer odpowiada wolno — ponawiam", file=sys.stderr)
@@ -77,7 +83,9 @@ class GR:
                 if e.code in (401, 403):
                     sys.exit(f"Błąd {e.code}: klucz API nieprawidłowy, wygasł albo nie ma dostępu ({sciezka}).")
                 if e.code == 404:
-                    return None, {}
+                    if sciezka not in self.niedostepne:
+                        self.niedostepne.append(sciezka)
+                    return None, {"_404": True}
                 if e.code >= 500 and proba < 4:
                     time.sleep(3 * (proba + 1))
                     continue
@@ -87,7 +95,7 @@ class GR:
                     time.sleep(3 * (proba + 1))
                     continue
                 raise
-        return None, {}
+        sys.exit(f"API GetResponse nie odpowiedziało po 5 próbach ({sciezka}) — przerwano, żeby raport nie był oparty na brakujących danych. Uruchom ponownie za kilka minut.")
 
     def wszystkie(self, sciezka, params=None, per_page=100, max_stron=50):
         wynik = []
@@ -97,8 +105,14 @@ class GR:
             if not d:
                 break
             wynik += d
-            if strona >= int(h.get("totalpages") or 1):
+            if "totalpages" not in h:
+                if len(d) >= per_page:
+                    self.ostrzezenia.append(f"{sciezka}: API nie podało liczby stron — pobrano tylko pierwszą stronę ({len(d)} pozycji).")
                 break
+            if strona >= int(h["totalpages"]):
+                break
+        else:
+            self.ostrzezenia.append(f"{sciezka}: pobrano maksymalnie {max_stron * per_page} pozycji — reszta pominięta.")
         return wynik
 
 
@@ -136,14 +150,16 @@ def problemy_maila(m):
     if m["wyslane"] >= 200:
         if (m["wypisy_proc"] or 0) > 0.5:
             p.append("dużo wypisów " + f(m["wypisy_proc"]))
-        if (m["skargi_proc"] or 0) > 0.1:
-            p.append("skargi na spam " + f(m["skargi_proc"]) + " (Google wymaga poniżej 0,3%)")
+        if (m["skargi_proc"] or 0) >= 0.3:
+            p.append("skargi na spam " + f(m["skargi_proc"]) + " — przekroczony próg Google 0,3%")
+        elif (m["skargi_proc"] or 0) > 0.1:
+            p.append("skargi na spam " + f(m["skargi_proc"]) + " — powyżej zalecanych przez Google 0,1%")
         if (m["odbicia_proc"] or 0) > 2:
             p.append("odbicia " + f(m["odbicia_proc"]))
         if m["klikniecia_ludzi_proc"] is not None and m["klikniecia_ludzi_proc"] < 0.5:
             p.append("prawie nikt nie klika (" + f(m["klikniecia_ludzi_proc"]) + ")")
     if not m.get("liczy_przychod"):
-        p.append("przychód nieliczony")
+        p.append("bez śledzenia e-commerce")
     if "bez tytułu" in (m.get("nazwa") or "").lower() or "untitled" in (m.get("nazwa") or "").lower():
         p.append("nazwa robocza")
     return p
@@ -151,7 +167,7 @@ def problemy_maila(m):
 
 def czysc(t):
     """[[firstname fallback=…]] → „…” — temat czytelny w raporcie."""
-    t = unicodedata.normalize("NFKC", t or "")  # „𝗘𝗸𝘀𝗸𝗹𝘂𝘇𝘆𝘄𝗻𝘆” → „Ekskluzywny”
+    t = unicodedata.normalize("NFKC", str(t) if t else "")  # „𝗘𝗸𝘀𝗸𝗹𝘂𝘇𝘆𝘄𝗻𝘆” → „Ekskluzywny”
     return re.sub(r"\[\[[^\]]*\]\]", "…", t).strip()
 
 
@@ -170,6 +186,10 @@ def main():
     ap.add_argument("--bez-zamowien", action="store_true", help="pomiń liczenie zamówień (szybciej przy ogromnych sklepach)")
     a = ap.parse_args()
 
+    if not a.api.startswith("https://"):
+        sys.exit("--api musi zaczynać się od https:// — inaczej klucz API poszedłby jawnym tekstem.")
+    if a.dni < 1:
+        sys.exit("--dni musi być co najmniej 1.")
     klucz = os.environ.get("GETRESPONSE_API_KEY")
     if not klucz:
         sys.exit("Brak zmiennej GETRESPONSE_API_KEY. Klucz: GetResponse → Menu → Integracje i API → API.")
@@ -282,8 +302,9 @@ def main():
                         bez += 0 if o.get("contactId") else 1
                 if stop or strona >= int(h.get("totalpages") or 1):
                     break
+            obciete = strona == MAX_STRON_ZAMOWIEN and not stop and bool(d)
             sk.update({"zamowienia": n, "suma": round(suma, 2), "bez_kontaktu": bez,
-                       "bez_kontaktu_proc": proc(bez, n), "obciete": not stop and n > 0})
+                       "bez_kontaktu_proc": proc(bez, n), "obciete": obciete})
             if n == 0:
                 d, _ = gr.get(f"/shops/{sid}/orders", {"perPage": 1, "sort[createdOn]": "desc", "fields": "orderId,processedAt"})
                 sk["ostatnie_zamowienie"] = ((d or [{}])[0].get("processedAt") or "")[:10] if d else None
@@ -296,7 +317,8 @@ def main():
         maile_tr = [x for x in D["maile_automatow"] if dopasuj((x["nazwa"] or "") + " " + (x["temat"] or ""), slowa)]
         if nazwa.startswith("Powitanie"):
             # klasyczny autoresponder = cykl maili liczony od dnia zapisu, czyli z definicji seria powitalna
-            maile_tr += [x for x in D["autorespondery"] if x not in maile_tr]
+            maile_tr += [x for x in D["autorespondery"] if x.get("dzien_cyklu") == 0 and x not in maile_tr]
+        maile_tr.sort(key=lambda x: (x["status"] != "enabled", -x["wyslane"]))
         if any(x["aktywny"] and (x["zakonczyli"] + x["w_trakcie"]) > 0 for x in auto) or \
                 any(x["wyslane"] > 0 and x["status"] == "enabled" for x in maile_tr):
             stan = "działa"
@@ -307,10 +329,14 @@ def main():
         D["lista_kontrolna"].append({"automat": nazwa, "stan": stan,
                                      "trafienia": [x["nazwa"] for x in auto][:3] + [x["temat"] for x in maile_tr][:2]})
     D["zapytan_api"] = gr.zapytan
+    D["niedostepne"] = gr.niedostepne
+    D["ostrzezenia"] = gr.ostrzezenia
 
-    open(a.raport, "w", encoding="utf-8").write(raport(D))
+    with open(a.raport, "w", encoding="utf-8") as plik:
+        plik.write(raport(D))
     if a.json:
-        json.dump(D, open(a.json, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        with open(a.json, "w", encoding="utf-8") as plik:
+            json.dump(D, plik, ensure_ascii=False, indent=1)
     print(f"Gotowe: {a.raport} ({gr.zapytan} zapytań do API)", file=sys.stderr)
 
 
@@ -329,7 +355,12 @@ def f(x, suf="%"):
 
 
 def zl(x):
-    return "—" if x is None else f"{x:,.0f}".replace(",", " ")
+    if x is None:
+        return "—"
+    try:
+        return f"{float(x):,.0f}".replace(",", " ")
+    except (TypeError, ValueError):
+        return str(x)
 
 
 def raport(D):
@@ -344,18 +375,18 @@ def raport(D):
                    + ", ".join(x["automat"].split(" (")[0].lower() for x in brak) + ".")
     martwe = [x for x in D["automaty"] if "nikt przez niego nie przeszedł" in " ".join(x["uwagi"])]
     if martwe:
-        naj.append(f"{len(martwe)} {odm(len(martwe), 'automat jest włączony', 'automaty są włączone', 'automatów jest włączonych')}, ale nikt przez {odm(len(martwe), 'niego', 'nie', 'nie')} nie przeszedł — {odm(len(martwe), 'wygląda na działający', 'wyglądają na działające', 'wyglądają na działające')}, a nic nie wysyła.")
+        naj.append(f"{len(martwe)} {odm(len(martwe), 'automat jest włączony', 'automaty są włączone', 'automatów jest włączonych')}, ale nikt przez {odm(len(martwe), 'niego', 'nie', 'nie')} nie przeszedł. Sprawdź w panelu warunek startu.")
     for s in D["sklepy"]:
         if s.get("zamowienia") == 0:
-            kiedy = f"ostatnie zamówienie dotarło {s['ostatnie_zamowienie']}" if s.get("ostatnie_zamowienie") else "nie dotarło do niego jeszcze żadne zamówienie"
-            naj.append(f"Sklep „{s['nazwa']}” jest podłączony do GetResponse, ale w oknie nie ma żadnych zamówień ({kiedy}). Integracja nie przesyła sprzedaży — automaty koszyka i po zakupie oraz liczenie przychodu nie mają na czym działać.")
+            kiedy = f"ostatnie zwrócone zamówienie: {s['ostatnie_zamowienie']}" if s.get("ostatnie_zamowienie") else "ani żadnego z całej historii"
+            naj.append(f"Sklep „{s['nazwa']}” jest podłączony do GetResponse, ale API nie zwróciło zamówień z tego okresu ({kiedy}). Jeśli sklep w tym czasie sprzedawał, integracja najpewniej nie przesyła zamówień — wtedy automaty koszyka i po zakupie oraz liczenie przychodu nie mają na czym działać. Sprawdź integrację sklepu w panelu.")
         if (s.get("bez_kontaktu_proc") or 0) >= 10:
-            naj.append(f"Sklep „{s['nazwa']}”: {f(s['bez_kontaktu_proc'])} zamówień trafia do GetResponse bez kontaktu. Część to klienci bez zgody na maile (tak ma być), ale sprawdź, czy każdy, kto zaznaczył zgodę, ma kontakt — inaczej nie dostanie maili po zakupie.")
+            naj.append(f"Sklep „{s['nazwa']}”: {f(s['bez_kontaktu_proc'])} zamówień jest w GetResponse bez przypisanego kontaktu. Może to być klient bez zgody na maile (wtedy w porządku) albo błąd synchronizacji — sprawdź na kilku zamówieniach z zaznaczoną zgodą, czy kupujący jest kontaktem w GetResponse.")
     wszystkie = D["maile_automatow"] + D["newslettery"]
     wysylane = [x for x in wszystkie if x["wyslane"] > 0]
     bez_przych = [x for x in wysylane if not x["liczy_przychod"]]
     if bez_przych:
-        naj.append(f"{len(bez_przych)} z {len(wysylane)} wysyłanych maili nie ma włączonego liczenia przychodu — nie wiadomo, ile sprzedają.")
+        naj.append(f"{len(bez_przych)} z {len(wysylane)} wysyłanych maili nie ma włączonego śledzenia e-commerce (flaga w ustawieniach wiadomości) — sprzedaż z nich najpewniej nie jest przypisywana. Sprawdź w ustawieniach wiadomości: Śledzenie.")
     nl = D["newslettery"]
     if D["okno_dni"] and nl:
         n_tyg = len(nl) / (D["okno_dni"] / 7)
@@ -399,7 +430,7 @@ def raport(D):
             return round(sum(a * b for a, b in war) / sum(b for _, b in war), 2) if war else None
         L += [f"- Wysłanych newsletterów: **{len(nl)}** (średnio {tyg(len(nl) / (D['okno_dni'] / 7))} tygodniowo), łącznie {zl(w)} maili.",
               f"- Średnio (ważone liczbą wysłanych): otwarcia ludzi {f(sr('otwarcia_ludzi_proc'))}, kliknięcia {f(sr('klikniecia_ludzi_proc'))}, wypisy {f(sr('wypisy_proc'))}, skargi {f(sr('skargi_proc'))}, odbicia {f(sr('odbicia_proc'))}.",
-              f"- Z liczeniem przychodu: {sum(1 for x in nl if x['liczy_przychod'])} z {len(nl)}.", "",
+              f"- Ze śledzeniem e-commerce: {sum(1 for x in nl if x['liczy_przychod'])} z {len(nl)}.", "",
               "| Data | Temat | Wysłane | Kliknięcia | Wypisy | Problemy |", "|---|---|---|---|---|---|"]
         for x in nl[:25]:
             L.append(f"| {x['wyslany']} | {x['temat']} | {zl(x['wyslane'])} | {f(x['klikniecia_ludzi_proc'])} | {f(x['wypisy_proc'])} | {', '.join(x['problemy'])} |")
@@ -411,13 +442,13 @@ def raport(D):
 
     L += ["## Sklep", ""]
     if not D["sklepy"]:
-        L += ["Do GetResponse nie jest podłączony żaden sklep — automaty koszyka, po zakupie i liczenie przychodu nie mają danych.", ""]
+        L += ["API nie zwróciło żadnego podłączonego sklepu. Jeśli sklep jest podłączony w panelu, sprawdź uprawnienia klucza; jeśli nie — automaty koszyka i po zakupie nie mają danych.", ""]
     for s in D["sklepy"]:
         L += [f"**{s['nazwa']}** ({s['waluta']})", ""]
         if "zamowienia" in s:
             L += [f"- Zamówienia w GetResponse w oknie (bez anulowanych i zwróconych): **{zl(s['zamowienia'])}** na {zl(s['suma'])} {s['waluta']}"
                   + (" (liczenie przerwane bezpiecznikiem — sklep bardzo duży)" if s.get("obciete") else "") + ".",
-                  f"- Bez przypisanego kontaktu: **{zl(s['bez_kontaktu'])} ({f(s['bez_kontaktu_proc'])})** — część to klienci bez zgody na maile; problem jest wtedy, gdy brakuje kontaktu klientom ze zgodą."]
+                  f"- Bez przypisanego kontaktu: **{zl(s['bez_kontaktu'])} ({f(s['bez_kontaktu_proc'])})** — klient bez zgody na maile albo błąd synchronizacji; sprawdź na zamówieniach z zaznaczoną zgodą."]
         L += [f"- Raport e-commerce GetResponse (API) w tym oknie: {zl(s['raport_zamowienia'])} {odm(int(s['raport_zamowienia'] or 0), 'zamówienie', 'zamówienia', 'zamówień')}, {zl(s['raport_przychod'])} {s['waluta']}. "
               "Jeśli to dużo mniej niż zamówienia powyżej, raport liczy tylko przychód przypisany do maili (zakup po kliknięciu w link) — porównaj z panelem: Raporty → E-commerce.", ""]
 
@@ -426,7 +457,12 @@ def raport(D):
           "- Który mail należy do którego automatu.",
           "- Przypisanego przychodu per automat (kolumna „Przypisany przychód” na liście automatów).",
           "- Czy na stronie działa śledzenie (Web Connect) potrzebne do automatów przeglądania produktów.", "",
-          f"_Zapytań do API: {D['zapytan_api']}._", ""]
+          "- Progi w kolumnie „Problemy” (wypisy > 0,5%, kliknięcia < 0,5%, odbicia > 2%, ocena od 200 wysłanych) to orientacyjne progi praktyczne, nie normy. Skargi: Google wymaga poniżej 0,3% i zaleca poniżej 0,1%.", ""]
+    if D.get("niedostepne"):
+        L += ["**Niedostępne na tym koncie (API zwróciło 404 — funkcja może nie wchodzić w plan):** " + ", ".join(f"`{x}`" for x in D["niedostepne"][:8]), ""]
+    if D.get("ostrzezenia"):
+        L += ["**Ostrzeżenia:**", ""] + [f"- {x}" for x in D["ostrzezenia"]] + [""]
+    L += [f"_Zapytań do API: {D['zapytan_api']}._", ""]
     return "\n".join(L)
 
 

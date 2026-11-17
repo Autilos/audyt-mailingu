@@ -5,12 +5,12 @@ description: Audyt e-mail marketingu sklepu internetowego w GetResponse — tylk
 
 # Audyt GetResponse (tylko odczyt)
 
-Skill czyta konto GetResponse przez oficjalne API v3 i pisze raport. **Niczego nie zmienia** — skrypt wywołuje wyłącznie zapytania GET. Nie zapisuje adresów e-mail ani danych osobowych, tylko liczby zbiorcze.
+Skill czyta konto GetResponse przez oficjalne API v3 i pisze raport. **Niczego nie zmienia** — skrypt wywołuje wyłącznie zapytania GET. Nie pobiera adresów e-mail ani danych kontaktów — tylko liczby zbiorcze oraz nazwy automatów, list i tematy maili z konta.
 
 ## Krok 1 — klucz API
 
 1. Zapytaj użytkownika, czy ma klucz API. Jeśli nie: GetResponse → **Menu → Integracje i API → API → Wygeneruj klucz API**.
-2. Uprzedź wprost: **klucz API GetResponse daje pełny dostęp do konta** (GetResponse nie ma kluczy tylko do odczytu). Ten skill tylko czyta, ale klucz trzymaj jak hasło, a po audycie możesz go usunąć w tym samym miejscu.
+2. Uprzedź wprost: **klucz API GetResponse daje pełny dostęp do konta** (w dokumentacji API, stan na listopad 2026, nie ma kluczy ograniczonych do odczytu). Ten skill tylko czyta, ale klucz trzymaj jak hasło, a po audycie możesz go usunąć w tym samym miejscu.
 3. Klucz ustaw jako zmienną środowiskową w terminalu użytkownika — **nie wklejaj go do czatu i nie zapisuj w plikach projektu**:
    ```bash
    export GETRESPONSE_API_KEY='…'
@@ -38,14 +38,15 @@ Jak czytać wyniki:
 |---|---|---|
 | Automat włączony, 0 zakończyło i 0 w trakcie | Wygląda na działający, a nikt do niego nie wchodzi — zwykle zły warunek startu, pusta lista albo brak zdarzeń ze sklepu | Sprawdź w panelu element startowy automatu |
 | ❓ na liście kontrolnej | Nie znaleziono automatu po nazwie — API nie pokazuje warunków | Zapytaj użytkownika, czy taki automat ma pod inną nazwą; jeśli nie — to luka do zbudowania |
-| Sklep bez zamówień w oknie | Integracja sklepu nie przesyła sprzedaży | Sprawdź wtyczkę/integrację sklepu (Integracje → e-commerce) |
+| Sklep bez zamówień w oknie | API nie zwróciło zamówień — jeśli sklep sprzedawał, integracja najpewniej ich nie przesyła | Zapytaj, czy sklep sprzedawał; sprawdź integrację sklepu w panelu |
 | Dużo zamówień bez kontaktu | Kupujący nie są łączeni z kontaktami | Normalne dla klientów bez zgody; problem, gdy dotyczy kupujących ze zgodą na maile |
-| „przychód nieliczony” | Mail nie ma włączonego przypisywania przychodu | Ustawienia wiadomości → Śledzenie → przypisywanie przychodu (plan Marketer i wyżej) |
+| „bez śledzenia e-commerce” | Mail nie ma flagi śledzenia e-commerce, więc sprzedaż z niego najpewniej nie jest przypisywana | Ustawienia wiadomości → Śledzenie; przypisywanie przychodu działa od planu Marketer (wg bloga GetResponse) |
 | Wypisy > 0,5% na wysyłkę | Treść lub częstotliwość męczy odbiorców | Rzadziej, lepiej dobrany segment |
-| Skargi na spam ≥ 0,3% | Ryzyko trafiania do spamu (próg Google dla nadawców masowych) | Pilne: segmentacja, łatwiejszy wypis, czyszczenie bazy |
+| Skargi na spam ≥ 0,3% (powyżej 0,1% — ostrzeżenie) | Google wymaga od nadawców masowych poniżej 0,3% i zaleca poniżej 0,1% | Pilne: segmentacja, łatwiejszy wypis, czyszczenie bazy |
 | Kliknięcia < 0,5% | Mail praktycznie nic nie robi | Zmień ofertę/temat albo wyłącz |
 
 Zasady:
+- Progi wypisów i kliknięć to orientacyjne progi praktyczne, nie normy — mów o nich jako o sygnale do sprawdzenia.
 - Oceniaj maile po kliknięciach i sprzedaży, nie po otwarciach (otwarcia zawyżają programy pocztowe, nawet po odsianiu botów).
 - Nie podawaj liczb, których nie ma w raporcie. Czego API nie widzi — powiedz, że trzeba sprawdzić w panelu.
 - Nie proponuj zmian na koncie przez API — ten skill jest tylko do odczytu.
