@@ -30,6 +30,16 @@ import urllib.request
 API = "https://connect.mailerlite.com/api"
 PRZERWA = 0.55  # limit MailerLite: 120 zapytań na minutę
 
+
+class _BezPrzekierowan(urllib.request.HTTPRedirectHandler):
+    """Przekierowanie = błąd. urllib przy przekierowaniu wysyła nagłówki (z kluczem) pod nowy adres."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_OTWIERACZ = urllib.request.build_opener(_BezPrzekierowan)
+
 # Lista kontrolna wg WYZWALACZA automatu (API MailerLite go pokazuje). Wyzwalacze ogólne
 # (formularz, grupa, segment, pole) rozstrzyga nazwa automatu.
 KOSZYK = {"abandoned_cart", "abandoned_checkout"}
@@ -61,7 +71,7 @@ class ML:
             time.sleep(PRZERWA)
             self.zapytan += 1
             try:
-                r = urllib.request.urlopen(urllib.request.Request(url, headers=self.h), timeout=120)
+                r = _OTWIERACZ.open(urllib.request.Request(url, headers=self.h), timeout=120)
                 surowe = r.read() or b"null"
                 try:
                     return json.loads(surowe)
@@ -73,6 +83,8 @@ class ML:
                     continue
                 raise
             except urllib.error.HTTPError as e:
+                if 300 <= e.code < 400:
+                    sys.exit(f"API odpowiedziało przekierowaniem ({e.code}) — przerwano, token nie został wysłany pod inny adres.")
                 if e.code == 429:
                     try:
                         czekaj = int(e.headers.get("Retry-After") or 60)

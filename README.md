@@ -2,7 +2,7 @@
 
 Skill do Claude Code, który w kilka minut sprawdza e-mail marketing Twojego sklepu i mówi wprost, co nie działa.
 
-**Teraz:** GetResponse i MailerLite. **W planie:** Klaviyo.
+Obsługuje **GetResponse** i **MailerLite**.
 
 ## Co sprawdza
 
@@ -19,8 +19,12 @@ Wynik: raport po polsku z listą najważniejszych problemów na górze.
 
 - **Tylko odczyt.** Skrypt wysyła wyłącznie zapytania GET — niczego nie zmienia, nie wysyła maili, nie kasuje kontaktów. Kod jest krótki i jawny: [GetResponse](skills/audyt-getresponse/scripts/audyt_getresponse.py), [MailerLite](skills/audyt-mailerlite/scripts/audyt_mailerlite.py).
 - **Bez danych kontaktów.** Skrypt nie pobiera adresów e-mail ani danych subskrybentów — raport ma liczby zbiorcze oraz nazwy automatów, list i tematy maili z Twojego konta.
-- **Klucz zostaje u Ciebie.** Skrypt czyta klucz ze zmiennej środowiskowej na Twoim komputerze i łączy się bezpośrednio z API systemu mailingowego.
-- Klucze API GetResponse i MailerLite dają pełny dostęp do konta (dokumentacja nie przewiduje kluczy tylko do odczytu). Po audycie możesz je usunąć.
+- **Klucz zostaje u Ciebie, bez pośrednika.** Skrypt czyta klucz ze zmiennej środowiskowej na Twoim komputerze i wysyła go wyłącznie do oficjalnego API GetResponse albo MailerLite. Inne adresy i przekierowania są odrzucane, a klucz nie trafia do raportu ani do komunikatów o błędach. Jeśli masz ustawione proxy w zmiennych środowiskowych (`HTTPS_PROXY`), połączenie idzie przez nie, nadal szyfrowane.
+- **Wyniki zostają na Twoim dysku.** Raport to plik `audyt-*.md` w bieżącym katalogu. W Claude Code jego treść (nazwy automatów, list, tematy maili, liczby) trafia do rozmowy, tak jak każdy plik, który Claude czyta.
+- **Klucz traktuj jak hasło.** Nie udało się potwierdzić, że GetResponse lub MailerLite oferują klucze tylko do odczytu, więc zakładaj, że klucz daje pełny dostęp do konta. Ten skill go nie wykorzystuje do zmian, ale po audycie klucz usuń:
+  - GetResponse: Menu → Integracje i API → API → usuń klucz,
+  - MailerLite: Integracje → MailerLite API → usuń token.
+- Zgłaszanie problemów z bezpieczeństwem: [SECURITY.md](SECURITY.md).
 
 ## Instalacja w Claude Code
 
@@ -35,12 +39,12 @@ Potem napisz: **„zrób audyt mojego GetResponse”** albo **„zrób audyt moj
 
 ```bash
 # GetResponse
-export GETRESPONSE_API_KEY='twój-klucz'      # GetResponse → Menu → Integracje i API → API
-python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --dni 90 --raport audyt.md
+read -rs GETRESPONSE_API_KEY && export GETRESPONSE_API_KEY   # wklej klucz, Enter (GetResponse → Menu → Integracje i API → API)
+python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --dni 90 --raport audyt-getresponse.md
 
 # MailerLite
-export MAILERLITE_API_KEY='twój-token'       # MailerLite → Integracje → MailerLite API
-python3 skills/audyt-mailerlite/scripts/audyt_mailerlite.py --dni 90 --raport audyt.md
+read -rs MAILERLITE_API_KEY && export MAILERLITE_API_KEY     # wklej token, Enter (MailerLite → Integracje → MailerLite API)
+python3 skills/audyt-mailerlite/scripts/audyt_mailerlite.py --dni 90 --raport audyt-mailerlite.md
 ```
 
 Wymaga Pythona 3.8+, bez dodatkowych pakietów.

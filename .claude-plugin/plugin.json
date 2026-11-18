@@ -1,9 +1,10 @@
 {
   "name": "audyt-mailingu",
   "displayName": "Audyt e-mail marketingu",
-  "description": "Audyt e-mail marketingu sklepu internetowego (GetResponse i MailerLite; wkrótce Klaviyo) — tylko odczyt, raport po polsku",
-  "version": "0.2.0",
+  "description": "Audyt e-mail marketingu sklepu internetowego (GetResponse i MailerLite) — tylko odczyt, raport po polsku",
+  "version": "0.2.1",
   "author": { "name": "Wojciech Nowak", "url": "https://marketingkrokpokroku.pl" },
+  "repository": "https://github.com/Autilos/audyt-mailingu",
   "license": "MIT",
   "keywords": ["getresponse", "email-marketing", "e-commerce", "audyt", "automatyzacja"]
 }

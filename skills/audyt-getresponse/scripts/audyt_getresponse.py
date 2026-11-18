@@ -31,6 +31,18 @@ import urllib.request
 
 PRZERWA = 0.3  # s między zapytaniami; limit GR to 80/s, ale w praktyce ~4/s bez 429
 MAX_STRON_ZAMOWIEN = 120  # 120 × 500 zamówień — bezpiecznik dla bardzo dużych sklepów
+# Klucz idzie wyłącznie do oficjalnych adresów API GetResponse (zwykłe konto i GetResponse MAX).
+DOZWOLONE_API = ("https://api.getresponse.com/v3", "https://api3.getresponse360.pl/v3", "https://api3.getresponse360.com/v3")
+
+
+class _BezPrzekierowan(urllib.request.HTTPRedirectHandler):
+    """Przekierowanie = błąd. urllib przy przekierowaniu wysyła nagłówki (z kluczem) pod nowy adres."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_OTWIERACZ = urllib.request.build_opener(_BezPrzekierowan)
 
 # Automaty, które powinien mieć sklep internetowy. Wykrywane po NAZWIE automatu i tematach maili —
 # API GetResponse nie pokazuje warunków ani wyzwalaczy automatu, więc „nie znaleziono” = sprawdź w panelu.
@@ -56,13 +68,15 @@ class GR:
 
     def get(self, sciezka, params=None):
         url = self.api + sciezka
+        if self.api not in DOZWOLONE_API:
+            sys.exit("Nieoczekiwany adres API — przerwano, klucz nie zostanie wysłany.")
         if params:
             url += ("&" if "?" in url else "?") + urllib.parse.urlencode(params, safe="[]")
         for proba in range(5):
             time.sleep(PRZERWA)
             self.zapytan += 1
             try:
-                r = urllib.request.urlopen(urllib.request.Request(url, headers=self.h), timeout=240)
+                r = _OTWIERACZ.open(urllib.request.Request(url, headers=self.h), timeout=240)
                 surowe = r.read() or b"null"
                 try:
                     return json.loads(surowe), {k.lower(): v for k, v in r.headers.items()}
@@ -75,6 +89,8 @@ class GR:
                     continue
                 raise
             except urllib.error.HTTPError as e:
+                if 300 <= e.code < 400:
+                    sys.exit(f"API odpowiedziało przekierowaniem ({e.code}, {sciezka}) — przerwano, klucz nie został wysłany pod inny adres.")
                 if e.code == 429:
                     czekaj = int(e.headers.get("X-RateLimit-Reset") or 30)
                     print(f"  limit zapytań — czekam {czekaj} s", file=sys.stderr)
@@ -186,8 +202,9 @@ def main():
     ap.add_argument("--bez-zamowien", action="store_true", help="pomiń liczenie zamówień (szybciej przy ogromnych sklepach)")
     a = ap.parse_args()
 
-    if not a.api.startswith("https://"):
-        sys.exit("--api musi zaczynać się od https:// — inaczej klucz API poszedłby jawnym tekstem.")
+    a.api = a.api.rstrip("/")
+    if a.api not in DOZWOLONE_API:
+        sys.exit("--api musi być jednym z oficjalnych adresów API GetResponse: " + ", ".join(DOZWOLONE_API))
     if a.dni < 1:
         sys.exit("--dni musi być co najmniej 1.")
     klucz = os.environ.get("GETRESPONSE_API_KEY")

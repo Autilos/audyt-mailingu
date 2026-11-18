@@ -1,4 +1,7 @@
-audyt-*.md
+# domyślne nazwy raportów i danych z audytu
+audyt*.md
+audyt*.json
+dane*.json
 *.json.tmp
 __pycache__/
 .env
