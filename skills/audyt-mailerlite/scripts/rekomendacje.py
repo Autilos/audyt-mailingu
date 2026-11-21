@@ -116,3 +116,57 @@ def uloz(klucze, serie=None):
     for i, (tyt, tresc, szcz) in enumerate(serie or []):
         wynik.append((50 + i / 100, tyt, tresc, szcz or ""))
     return [(t, r, s) for _, t, r, s in sorted(wynik, key=lambda x: x[0])]
+
+
+# Gdzie w panelu wykonać zadanie (ogólnie dla GetResponse i MailerLite).
+GDZIE = {
+    "sklep_bez_zamowien": "panel → Integracje (połączenie ze sklepem)",
+    "brak_sklepu": "panel → Integracje → e-commerce",
+    "zamowienia_bez_kontaktu": "sklep → kilka ostatnich zamówień ze zgodą; panel → Kontakty",
+    "przychod_rozjazd": "panel → Integracje (sklep) i Raporty → E-commerce",
+    "domena_nadawcy": "panel → Adresy nadawcy / Domeny",
+    "dkim_dmarc": "ustawienia DNS domeny + panel → Domeny",
+    "nadawca_darmowy": "panel → Adresy nadawcy",
+    "brak_wypisu": "panel → Automatyzacje → mail → stopka",
+    "skargi_spam": "panel → Kontakty / segmenty i stopka maila",
+    "duzo_wypisow": "panel → Automatyzacje i Newslettery",
+    "za_czesto": "panel → Newslettery (kalendarz wysyłek)",
+    "odplyw_bazy": "panel → Kontakty → statystyki",
+    "brak_newsletterow": "panel → Newslettery",
+    "automat_zepsuty": "panel → Automatyzacje",
+    "powitanie_brak": "panel → Automatyzacje (nowy automat po zapisie)",
+    "koszyk_brak": "panel → Automatyzacje (szablon porzuconego koszyka)",
+    "formularz_bez_ruchu": "panel → Formularze",
+    "formularz_niska_konwersja": "panel → Formularze",
+    "po_zakupie_brak": "panel → Automatyzacje (start: zakup)",
+    "drugi_zakup_brak": "panel → Automatyzacje (start: zakup + opóźnienie)",
+    "reaktywacja_brak": "panel → Automatyzacje i segment nieaktywnych",
+    "przegladanie_brak": "panel → Automatyzacje (śledzenie na stronie)",
+    "automat_martwy": "panel → Automatyzacje → element startowy",
+    "mail_nigdy_niewyslany": "panel → Automatyzacje",
+    "bez_sledzenia": "panel → ustawienia wiadomości → śledzenie sprzedaży",
+    "nazwa_robocza": "panel → Automatyzacje",
+}
+KONTAKT_MD = ("Pełny audyt i wdrożenie: Wojciech Nowak, "
+              "https://marketingkrokpokroku.pl/audyt-mailingu/?zrodlo=raport-md#kontakt, wnowak@autilo.eu")
+
+
+def gdzie_dla(tytul):
+    for k, (_, t, _) in REKOMENDACJE.items():
+        if t == tytul:
+            return GDZIE.get(k, "panel systemu mailowego")
+    return "panel → Automatyzacje" if "seri" in tytul.lower() else "panel systemu mailowego"
+
+
+def sekcja_dla_ai(problemy, rekomendacje, czego_nie_widzi):
+    """Zwięzła sekcja na koniec pliku .md — do wklejenia asystentowi AI (Claude, ChatGPT) albo agentowi.
+    problemy: lista zdań („Najważniejsze”); rekomendacje: lista (tytuł, treść, szczegół); czego_nie_widzi: lista zdań."""
+    L = ["## Dla asystenta AI", "",
+         "Ten fragment jest dla asystenta AI albo agenta, który ma pomóc we wdrożeniu poprawek. Dane z audytu są zbiorcze, bez danych osobowych.", "",
+         "### Problemy w kolejności ważności", ""]
+    L += [f"{i}. {p}" for i, p in enumerate(problemy, 1)] or ["Brak poważnych problemów."]
+    L += ["", "### Zadania do zrobienia", ""]
+    L += [f"- [ ] {t}" + (f" ({sz})" if sz else "") + f" — gdzie: {gdzie_dla(t)}" for t, _, sz in rekomendacje] or ["- [ ] Brak zadań."]
+    L += ["", "### Czego audyt nie sprawdził", ""] + [f"- {x}" for x in czego_nie_widzi]
+    L += ["", "### Kontakt", "", KONTAKT_MD, ""]
+    return L

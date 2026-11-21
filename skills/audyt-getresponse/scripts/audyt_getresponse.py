@@ -31,7 +31,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from seria_powitalna import klasyfikuj, wniosek_serii  # noqa: E402
-from rekomendacje import rekomendacja_serii, uloz  # noqa: E402
+from rekomendacje import rekomendacja_serii, uloz, sekcja_dla_ai  # noqa: E402
 
 PRZERWA = 0.3  # s między zapytaniami; limit GR to 80/s, ale w praktyce ~4/s bez 429
 MAX_STRON_ZAMOWIEN = 120  # 120 × 500 zamówień — bezpiecznik dla bardzo dużych sklepów
@@ -78,7 +78,7 @@ LISTA_KONTROLNA = [
     ("Porzucony koszyk", ["koszyk", "cart", "porzuc"]),
     ("Po zakupie (podziękowanie, opinia, kolejny produkt)", ["po zakup", "post-purchase", "postpurchase", "dziękujemy za zakup", "dziękujemy za zamówienie", "opini", "recenz"]),
     ("Porzucone przeglądanie (oglądał produkt, nie dodał do koszyka)", ["porzucone przegląd", "porzucone przeglad", "przeglądał", "przegladal", "oglądany produkt", "ogladany produkt", "odwiedzony produkt", "odwiedzone produkty", "browse abandon", "browse", "oglądał", "ogladal"]),
-    ("Drugi / ponowny zakup (przypomnienie o uzupełnieniu)", ["ponown", "drugi zakup", "drugie zamów", "kolejne zamów", "kolejny zakup", "po 1. zakup", "po pierwszym zakup", "replenish", "uzupełn", "uzupeln", "dokup"]),
+    ("Drugi / ponowny zakup (przypomnienie o uzupełnieniu)", ["ponowny zakup", "ponowne zamów", "ponownego zakupu", "drugi zakup", "drugie zamów", "kolejne zamów", "kolejny zakup", "po 1. zakup", "po pierwszym zakup", "replenish", "uzupełn", "uzupeln", "dokup"]),
     ("Reaktywacja nieaktywnych klientów", ["reaktyw", "win-back", "winback", "tęsknimy", "tesknimy", "wróć do nas", "wroc do nas", "dawno cię", "dawno cie", "dawno nie"]),
 ]
 
@@ -374,6 +374,7 @@ def main():
     ap.add_argument("--bez-zamowien", action="store_true", help="pomiń liczenie zamówień (szybciej przy ogromnych sklepach)")
     ap.add_argument("--przychod-sklepu", type=float, default=None, help="opcjonalnie: przychód sklepu w tym samym oknie (brutto, z panelu sklepu) — do porównania z GetResponse")
     ap.add_argument("--zamowienia-sklepu", type=int, default=None, help="opcjonalnie: liczba zamówień sklepu w oknie (bez anulowanych) — do porównania")
+    ap.add_argument("--pokaz", action="store_true", help="tryb pokazowy: bez klucza i bez internetu, na zmyślonych danych sklepu z herbatą")
     ap.add_argument("--test-polaczenia", action="store_true", help="tylko sprawdź, czy klucz działa (jedno zapytanie), i zakończ")
     a = ap.parse_args()
 
@@ -382,10 +383,15 @@ def main():
         sys.exit("--api musi być jednym z oficjalnych adresów API GetResponse: " + ", ".join(DOZWOLONE_API))
     if a.dni < 1:
         sys.exit("--dni musi być co najmniej 1.")
-    klucz = os.environ.get("GETRESPONSE_API_KEY")
-    if not klucz:
-        sys.exit("Brak zmiennej GETRESPONSE_API_KEY. Klucz: GetResponse → Menu → Integracje i API → API.")
-    gr = GR(klucz, a.api, a.max_domena)
+    if a.pokaz:
+        from pokaz_gr import PokazGR
+        gr = PokazGR()
+    else:
+        klucz = os.environ.get("GETRESPONSE_API_KEY")
+        if not klucz:
+            sys.exit("Brak zmiennej GETRESPONSE_API_KEY. Klucz: GetResponse → Menu → Integracje i API → API. "
+                     "Chcesz najpierw zobaczyć przykładowy raport bez klucza? Uruchom z --pokaz.")
+        gr = GR(klucz, a.api, a.max_domena)
     if a.test_polaczenia:
         d, _ = gr.get("/campaigns", {"perPage": 1, "fields": "campaignId"})
         print("Połączenie działa — klucz ma dostęp do konta (odczyt list)." if d is not None else "API odpowiedziało, ale bez danych.")
@@ -394,7 +400,7 @@ def main():
     od = dzis - dt.timedelta(days=a.dni)
     teraz = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
     D = {"data_audytu": dzis.isoformat(), "okno_dni": a.dni, "od": od.isoformat(),
-         "sklep_podany": {"przychod": a.przychod_sklepu, "zamowienia": a.zamowienia_sklepu}}
+         "sklep_podany": {"przychod": a.przychod_sklepu, "zamowienia": a.zamowienia_sklepu}, "pokaz": a.pokaz}
 
     print("1/6 listy kontaktów…", file=sys.stderr)
     listy = gr.wszystkie("/campaigns", {"fields": "campaignId,name"})
@@ -590,6 +596,7 @@ DARMOWE_DOMENY = {"gmail.com", "googlemail.com", "wp.pl", "o2.pl", "onet.pl", "o
 DKIM = {"not_recommended": "niezalecana konfiguracja", "can_not_be_used": "nie może być użyta",
         "not_authenticated": "domena nieuwierzytelniona (brak DKIM)", "at_risk": "zagrożona"}
 
+STOPKA_GWIAZDKA = "Audyt się przydał? Zostaw gwiazdkę: https://github.com/Autilos/audyt-mailingu albo krótką opinię: https://github.com/Autilos/audyt-mailingu/discussions/3"
 STOPKA_RAPORTU = "To podstawowy audyt. Chcesz pełny audyt albo wdrożenie poprawek? Napisz do mnie: https://marketingkrokpokroku.pl/audyt-mailingu/?zrodlo=raport#kontakt (Wojciech Nowak) albo wnowak@autilo.eu"
 
 KLUCZ_LISTY = ["powitanie_brak", "koszyk_brak", "po_zakupie_brak", "przegladanie_brak", "drugi_zakup_brak", "reaktywacja_brak"]
@@ -664,6 +671,7 @@ def sekcja_rekomendacji(D):
         else:
             dobre.append(gdzie)
     lista = uloz(klucze_problemow(D), serie)
+    D["_rekomendacje"] = lista
     L = ["## Rekomendacje — co zrobić i w jakiej kolejności", "",
          "Kolejność: najpierw dane (bez nich automaty nie działają), potem dostarczalność, potem automaty od najbardziej dochodowych. Rekomendacje dotyczą tylko tego, co wykrył audyt.", ""]
     for i, (tyt, tresc, szcz) in enumerate(lista, 1):
@@ -676,7 +684,10 @@ def sekcja_rekomendacji(D):
 
 
 def raport(D):
-    L = [f"# Audyt e-mail marketingu — GetResponse ({D['data_audytu']})", "",
+    L = [f"# Audyt e-mail marketingu — GetResponse ({D['data_audytu']})", ""]
+    if D.get("pokaz"):
+        L += ["> **Raport pokazowy — dane zmyślone.** Fikcyjny sklep z herbatą, bez połączenia z żadnym kontem. Tak wygląda raport z prawdziwego konta.", ""]
+    L += [
          f"Okres audytu newsletterów i zamówień: ostatnie {D['okno_dni']} dni (od {D['od']}). Tylko odczyt, dane zbiorcze, bez danych osobowych.", ""]
 
     # najważniejsze
@@ -721,6 +732,7 @@ def raport(D):
     elif not nl:
         naj.append(f"W ostatnich {D['okno_dni']} dniach nie wyszedł żaden newsletter.")
     L += ["## Najważniejsze", ""] + [f"{i}. {t}" for i, t in enumerate(naj or ["Nie znaleziono poważnych problemów w danych dostępnych przez API."], 1)] + [""]
+    D["_najwazniejsze"] = naj
     L += sekcja_rekomendacji(D)
 
     L += ["## Lista kontrolna automatów sklepu", "",
@@ -850,7 +862,9 @@ def raport(D):
         L += ["**Niedostępne na tym koncie (API zwróciło 404 — funkcja może nie wchodzić w plan):** " + ", ".join(f"`{x}`" for x in D["niedostepne"][:8]), ""]
     if D.get("ostrzezenia"):
         L += ["**Ostrzeżenia:**", ""] + [f"- {x}" for x in D["ostrzezenia"]] + [""]
-    L += [f"_Zapytań do API: {D['zapytan_api']}._", "", "---", "", STOPKA_RAPORTU, ""]
+    L += [f"_Zapytań do API: {D['zapytan_api']}._", ""]
+    L += sekcja_dla_ai(D.get("_najwazniejsze") or [], D.get("_rekomendacje") or [], ["Warunków, opóźnień i rozgałęzień w automatach (API GetResponse ich nie udostępnia).", "Który mail należy do którego automatu.", "Przychodu przypisanego do poszczególnych automatów (jest tylko w panelu).", "Czy na stronie działa śledzenie odwiedzin potrzebne do automatów przeglądania produktów."])
+    L += ["---", "", STOPKA_RAPORTU, "", STOPKA_GWIAZDKA, ""]
     return "\n".join(L)
 
 

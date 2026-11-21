@@ -198,12 +198,14 @@ footer .tm{font-size:.78rem;color:#ad9c80}
     <div class="kicker">Skill do Claude Code · darmowy · kod otwarty (MIT)</div>
     <h1>Audyt e-mail marketingu sklepu</h1>
     <div class="pod">GetResponse · MailerLite · tylko odczyt</div>
-    <p class="lead">Skill robi audyt e-mail marketingu sklepu: czyta Twoje konto przez oficjalne API i mówi wprost, co nie działa: automaty, przez które nikt nie przechodzi, maile bez linku do wypisu, sklep, który nie przesyła zamówień do GetResponse, i maile, które nie liczą sprzedaży. Wynik dostajesz jako raport po polsku: najpierw najważniejsze problemy, potem rekomendacje w kolejności wykonania. Raport możesz zamienić na PDF dołączonym skryptem (potrzebna przeglądarka Chrome, Chromium albo Edge).</p>
+    <p class="lead">Skill robi audyt e-mail marketingu sklepu: czyta Twoje konto przez oficjalne API i mówi wprost, co nie działa: automaty, przez które nikt nie przechodzi, maile bez linku do wypisu, sklep, który nie przesyła zamówień do GetResponse, i maile, które nie liczą sprzedaży. Wynik dostajesz jako raport po polsku: najpierw najważniejsze problemy, potem rekomendacje w kolejności wykonania. Dostajesz dwa pliki: PDF z klikalnymi linkami (potrzebna przeglądarka Chrome, Chromium albo Edge) i Markdown z sekcją „Dla asystenta AI”, który możesz dać swojemu asystentowi AI albo agentowi.</p>
     <div class="odznaka"><b>Nie pobiera danych osobowych kontaktów ani kupujących</b>: tylko statystyki, ustawienia i treść maili. W MailerLite nie pobiera nawet zamówień, bo API zwraca je razem z danymi kupującego.</div>
     <div class="przyciski">
       <a class="btn pelny" href="#instalacja">Jak zainstalować</a>
       <a class="btn pusty" href="https://github.com/Autilos/audyt-mailingu">Kod na GitHubie</a>
+      <a class="btn pusty" href="https://github.com/Autilos/audyt-mailingu/stargazers" title="Zostaw gwiazdkę na GitHubie">★ Gwiazdka na GitHubie</a>
     </div>
+    <p class="lead" style="margin-top:14px;font-size:1rem"><b>Wypróbuj bez klucza:</b> napisz w Claude Code „zrób pokazowy audyt” — dostaniesz raport na zmyślonych danych sklepu z herbatą, bez podawania klucza i bez połączenia z kontem.</p>
     <div class="status">
       <div><span>Dostęp do konta</span><b>tylko odczyt (GET)</b></div>
       <div><span>Dane osobowe</span><b>nie pobiera</b></div>
@@ -500,6 +502,8 @@ python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --dni 90 --raport 
     <div class="kicker">Pytania</div>
     <h2>Najczęstsze pytania</h2>
     <details><summary>Czy skill może coś zmienić na moim koncie?</summary><p>Skrypty wysyłają wyłącznie zapytania GET, czyli zapytania odczytu, a skill ma zasadę, że nie proponuje zmian przez API. Poprawki robisz sam w panelu. Sam klucz API daje jednak pełny dostęp do konta, dlatego trzymaj go jak hasło i po audycie usuń.</p></details>
+    <details><summary>Mogę zobaczyć raport, zanim podam klucz?</summary><p>Tak. Napisz w Claude Code „zrób pokazowy audyt” albo uruchom skrypt z <code>--pokaz</code>. Raport powstaje bez klucza i bez internetu, na zmyślonych danych sklepu z herbatą, i ma na górze adnotację „Raport pokazowy — dane zmyślone”.</p></details>
+    <details><summary>Co zrobić po audycie, jeśli nie wiem, jak to naprawić?</summary><p>Zapytaj w Claude Code „jak to naprawić?”. Skill podzieli zadania na to, co zrobisz sam w panelu, i to, co lepiej zlecić. Błąd w działaniu narzędzia zgłosisz poleceniem „zgłoś błąd” — Claude przygotuje zgłoszenie bez danych z Twojego konta.</p></details>
     <details><summary>Czy potrzebuję płatnego planu?</summary><p>Skill jest darmowy. Claude Code wymaga konta Claude z dostępem do Claude Code. W GetResponse klucz API na planie darmowym działa tylko w okresie próbnym (według pomocy GetResponse, stan na listopad 2026), więc do audytu potrzebny jest plan płatny albo konto w okresie próbnym. MailerLite udostępnia API także na planie darmowym. Jeśli jakaś funkcja nie wchodzi w Twój plan, raport zwykle pokaże ją jako niedostępną albo bez danych.</p></details>
     <details><summary>Mam sklep na WooCommerce albo Shopify. Czy to zadziała?</summary><p>Tak, jeśli integracja sklepu przesyła zamówienia do GetResponse albo MailerLite. Audyt czyta to, co sklep przesłał do systemu mailowego. Jeśli sklep nie jest podłączony, raport powie, że automaty koszyka i po zakupie nie mają danych.</p></details>
     <details><summary>Nie mam sklepu, prowadzę usługi albo kanał. Czy coś z tego będzie?</summary><p>Część tak: lista automatów, wyniki maili, wypisy, skargi na spam i częstotliwość newsletterów. Część dotycząca zamówień i koszyka będzie pusta, bo dotyczy sklepów.</p></details>

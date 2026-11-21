@@ -1,5 +1,7 @@
 # Audyt e-mail marketingu dla sklepów internetowych
 
+[![Gwiazdki na GitHubie](https://img.shields.io/github/stars/Autilos/audyt-mailingu?style=social)](https://github.com/Autilos/audyt-mailingu/stargazers)
+
 Skill do Claude Code, który w kilka minut sprawdza e-mail marketing Twojego sklepu i mówi wprost, co nie działa.
 
 Obsługuje **GetResponse** i **MailerLite**.
@@ -19,6 +21,25 @@ Obsługuje **GetResponse** i **MailerLite**.
 - **Przychód widziany przez GetResponse** i — jeśli podasz dane sklepu — porównanie z nimi.
 
 Wynik: raport po polsku — najpierw najważniejsze problemy, potem **rekomendacje w kolejności wykonania** (tylko do tego, co wykryto), potem szczegóły. Raport można zamienić na PDF: `python3 skills/audyt-getresponse/scripts/raport_pdf.py audyt-getresponse.md` (potrzebny Chrome, Chromium albo Edge; bez nich powstaje HTML do wydrukowania).
+
+## Wypróbuj bez klucza
+
+Chcesz zobaczyć raport, zanim podasz klucz API? Napisz w Claude Code **„zrób pokazowy audyt”** albo uruchom skrypt z `--pokaz` — działa bez klucza i bez internetu, na zmyślonych danych sklepu z herbatą:
+
+```bash
+python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --pokaz --raport audyt-pokaz.md
+python3 skills/audyt-getresponse/scripts/raport_pdf.py audyt-pokaz.md
+```
+
+Raport ma na górze adnotację „Raport pokazowy — dane zmyślone”. To samo dla MailerLite: `skills/audyt-mailerlite/scripts/audyt_mailerlite.py --pokaz`.
+
+## Raport: PDF i plik dla asystenta AI
+
+Po audycie dostajesz dwa pliki: **PDF** do czytania i wysłania dalej oraz **Markdown** (`.md`) z tą samą treścią i dodatkową sekcją „Dla asystenta AI” — listą problemów, zadań do odhaczenia z miejscem w panelu i tego, czego audyt nie sprawdził. Plik `.md` możesz dać swojemu asystentowi AI (Claude, ChatGPT) albo agentowi, żeby pomógł we wdrożeniu. Linki i adresy w PDF są klikalne.
+
+## Pomoc po audycie
+
+Zapytaj w Claude Code „jak to naprawić?”, „kto mi to wdroży?” albo „zgłoś błąd” — skill `audyt-pomoc` podzieli zadania na to, co zrobisz sam, i to, co lepiej zlecić, a przy błędzie przygotuje zgłoszenie bez danych z konta (szablon: [Issues](https://github.com/Autilos/audyt-mailingu/issues/new?template=blad.md)).
 
 ## Bezpieczeństwo
 
@@ -70,6 +91,10 @@ Przed zmianą kodu, raportu albo SKILL.md przeczytaj [docs/CONCEPTS.md](docs/CON
 ## Autor
 
 Wojciech Nowak — [marketingkrokpokroku.pl](https://marketingkrokpokroku.pl). Zmiany: [CHANGELOG.md](CHANGELOG.md).
+
+## Przydało się?
+
+Zostaw [gwiazdkę na GitHubie](https://github.com/Autilos/audyt-mailingu) (przycisk Star) albo krótką [opinię](https://github.com/Autilos/audyt-mailingu/discussions/3) — bez danych z konta.
 
 ## Chcesz pełny audyt albo wdrożenie poprawek?
 

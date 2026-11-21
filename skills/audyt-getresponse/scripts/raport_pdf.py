@@ -18,7 +18,7 @@ import subprocess
 import sys
 import tempfile
 
-STOPKA = "Audyt e-mail marketingu · więcej o narzędziu: marketingkrokpokroku.pl/audyt-mailingu"
+STOPKA_HTML = 'Audyt e-mail marketingu · więcej o narzędziu: <a href="https://marketingkrokpokroku.pl/audyt-mailingu/">marketingkrokpokroku.pl/audyt-mailingu</a>'
 
 CSS = """
 @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
@@ -37,17 +37,37 @@ th, td { border-bottom: 1px solid #dccfb3; padding: 4px 6px; vertical-align: top
 code { background: #f3ead8; padding: 0 3px; border-radius: 3px; font-size: 9pt; }
 strong { color: #1c0003; }
 ol li, ul li { margin: 3px 0; }
+a { color: #8a1020; }
 .stopka { margin-top: 26px; text-align: center; font-size: 8.5pt; color: #6e2028; border-top: 2px solid #d7bb79; padding-top: 6px; page-break-inside: avoid; }
 """
 
 
+RE_MD_LINK = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
+RE_URL = re.compile(r"https?://[^\s<>()\[\]„”\"']+[^\s<>()\[\]„”\"'.,;:!?)]")
+RE_MAIL = re.compile(r"(?<![\w.+-])[\w.+-]+@[\w-]+(?:\.[\w-]+)+(?![\w-])")
+
+
 def inline(t):
+    """Markdown w linii → HTML. Wszystkie adresy WWW i e-mail stają się klikalnymi linkami (także w PDF)."""
+    schowek = []
+
+    def odloz(fragment):
+        schowek.append(fragment)
+        return f"\x00{len(schowek) - 1}\x00"
+
+    t = RE_MD_LINK.sub(lambda m: odloz(f'<a href="{html.escape(m.group(2))}">{html.escape(m.group(1), quote=False)}</a>'), t)
+    t = RE_URL.sub(lambda m: odloz(f'<a href="{html.escape(m.group(0))}">{html.escape(m.group(0), quote=False)}</a>'), t)
+    t = RE_MAIL.sub(lambda m: odloz(f'<a href="mailto:{m.group(0)}">{m.group(0)}</a>'), t)
     t = html.escape(t, quote=False)
     t = re.sub(r"`([^`]+)`", r"<code>\1</code>", t)
     t = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", t)
     t = re.sub(r"(?<![\w*])_(.+?)_(?![\w*])", r"<em>\1</em>", t)
-    t = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r'<a href="\2">\1</a>', t)
-    return t
+    return re.sub(r"\x00(\d+)\x00", lambda m: schowek[int(m.group(1))], t)
+
+
+def bez_sekcji_dla_ai(md):
+    """Sekcja „Dla asystenta AI” jest dla pliku .md (do wklejenia asystentowi) — w PDF ją pomijamy."""
+    return re.sub(r"(?ms)^## Dla asystenta AI\n.*?(?=^## |^---\s*$|\Z)", "", md)
 
 
 def md_na_html(md):
@@ -104,12 +124,13 @@ def md_na_html(md):
 
 
 def dokument(md):
+    md = bez_sekcji_dla_ai(md)
     tytul = next((re.sub(r"^#\s+", "", x) for x in md.splitlines() if x.startswith("# ")), "Audyt e-mail marketingu")
     tresc = md_na_html("\n".join(x for x in md.splitlines() if x.strip() != f"# {tytul}"))
     return (f"<!doctype html><html lang=\"pl\"><head><meta charset=\"utf-8\"><title>{html.escape(tytul)}</title>"
             f"<style>{CSS}</style></head><body>"
             f"<div class=\"naglowek\"><div class=\"marka\">Audyt e-mail marketingu</div><h1>{inline(tytul)}</h1></div>"
-            f"{tresc}<div class=\"stopka\">{html.escape(STOPKA)}</div></body></html>")
+            f"{tresc}<div class=\"stopka\">{STOPKA_HTML}</div></body></html>")
 
 
 def przegladarka():
