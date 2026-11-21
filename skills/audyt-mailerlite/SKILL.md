@@ -1,11 +1,19 @@
 ---
 name: audyt-mailerlite
-description: Audyt e-mail marketingu sklepu internetowego w MailerLite — tylko odczyt. Sprawdza automaty po wyzwalaczu (powitanie, porzucony koszyk, po zakupie, ponowny zakup), czy są zepsute albo martwe, wyniki każdego maila w automacie, brak linku do wypisu, kampanie z ostatnich dni, podłączenie sklepu i liczenie sprzedaży z maili. Kończy raportem po polsku z listą najważniejszych problemów. Use when user says „audyt mailerlite", „sprawdź mój mailerlite", „czy moje automaty mailerlite działają", „audyt mailingu mailerlite", „mailerlite audit".
+description: Audyt e-mail marketingu sklepu internetowego w MailerLite — tylko odczyt. Sprawdza automaty po wyzwalaczu (powitanie, porzucony koszyk, po zakupie, ponowny zakup), czy są zepsute albo martwe, wyniki każdego maila w automacie, brak linku do wypisu, kampanie z ostatnich dni, podłączenie sklepu i liczenie sprzedaży z maili. Kończy raportem po polsku z listą najważniejszych problemów. Use when user says „audyt mailerlite", „sprawdź mój mailerlite", „czy moje automaty mailerlite działają", „audyt mailingu mailerlite", „mailerlite audit". Gdy użytkownik nie podał systemu, najpierw zapyta: GetResponse czy MailerLite.
 ---
 
 # Audyt MailerLite (tylko odczyt)
 
 Skill czyta konto MailerLite przez oficjalne API (nowy MailerLite, konta od 22.03.2022) i pisze raport. **Niczego nie zmienia** — skrypt wywołuje wyłącznie zapytania GET. Nie pobiera adresów e-mail ani danych subskrybentów.
+
+## Krok 0 — który system mailowy
+
+Jeśli użytkownik nie nazwał systemu wprost (napisał np. „zrób audyt mailingu”, „sprawdź moje maile”), **zapytaj, zanim cokolwiek uruchomisz**: „Z którego systemu wysyłasz maile: GetResponse czy MailerLite?”. Nie zgaduj po nazwie skilla.
+- GetResponse → przełącz się na skill `audyt-getresponse`.
+- MailerLite → ten skill.
+- Inny system (np. Mailchimp, Klaviyo, Brevo, SALESmanago) → powiedz wprost, że ten audyt obsługuje tylko GetResponse i MailerLite, i nie uruchamiaj skryptu.
+- MailerLite Classic (konta sprzed 22.03.2022) ma inne API i nie jest obsługiwany.
 
 ## Krok 1 — token API
 
