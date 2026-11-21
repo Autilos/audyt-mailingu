@@ -1,5 +1,9 @@
 # Zmiany
 
+## 0.3.2 — 2026-11-21
+
+- Porzucony koszyk i maile po zakupie: zanim raport poleci ich budowę, każe zapytać, czy sklep nie wysyła ich już innym systemem (maile transakcyjne sklepu, wtyczka, osobny serwis) — bez dublowania maili. Uwaga pod listą kontrolną w raporcie GetResponse i MailerLite, zasada w SKILL.md i `docs/CONCEPTS.md`.
+
 ## 0.3.1 — 2026-11-21
 
 - Raport pokazowy bez klucza i bez internetu: `--pokaz` w obu skryptach („zrób pokazowy audyt”), zmyślony sklep z herbatą, adnotacja „Raport pokazowy — dane zmyślone”.
