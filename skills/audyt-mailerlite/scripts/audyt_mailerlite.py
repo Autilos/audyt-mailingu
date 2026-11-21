@@ -29,7 +29,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from seria_powitalna import klasyfikuj, wniosek_serii  # noqa: E402
-from rekomendacje import rekomendacja_serii, uloz  # noqa: E402
+from rekomendacje import rekomendacja_serii, uloz, sekcja_dla_ai  # noqa: E402
 
 API = "https://connect.mailerlite.com/api"
 PRZERWA = 0.55  # limit MailerLite: 120 zapytań na minutę
@@ -66,7 +66,7 @@ PONOWNY = {"purchase_frequency"}
 SLOWA = {
     "Po zakupie": ["po zakup", "post-purchase", "dziękujemy za zakup", "dziękujemy za zamówienie", "opini", "recenz", "kupił", "kupil"],
     "Porzucony koszyk": ["koszyk", "cart", "porzuc"],
-    "Drugi zakup / reaktywacja": ["ponown", "drugi zakup", "kolejne zamów", "replenish", "uzupełn", "reaktyw", "win-back", "winback", "tęsknimy", "dawno cię", "dawno nie"],
+    "Drugi zakup / reaktywacja": ["ponowny zakup", "ponowne zamów", "ponownego zakupu", "drugi zakup", "kolejne zamów", "replenish", "uzupełn", "reaktyw", "win-back", "winback", "tęsknimy", "dawno cię", "dawno nie"],
     "Powitanie": ["powital", "powitan", "welcome", "witaj", "po zapisie", "za zapis", "onboard"],
 }
 LISTA = ["Powitanie", "Porzucony koszyk", "Po zakupie", "Drugi zakup / reaktywacja"]
@@ -269,16 +269,22 @@ def main():
     ap.add_argument("--dni", type=int, default=90)
     ap.add_argument("--raport", default="audyt-mailerlite.md")
     ap.add_argument("--json", default="")
+    ap.add_argument("--pokaz", action="store_true", help="tryb pokazowy: bez tokena i bez internetu, na zmyślonych danych sklepu z herbatą")
     a = ap.parse_args()
     if a.dni < 1:
         sys.exit("--dni musi być co najmniej 1.")
-    klucz = os.environ.get("MAILERLITE_API_KEY")
-    if not klucz:
-        sys.exit("Brak zmiennej MAILERLITE_API_KEY. Token: MailerLite → Integracje → MailerLite API → Wygeneruj nowy token.")
-    ml = ML(klucz)
+    if a.pokaz:
+        from pokaz_ml import PokazML
+        ml = PokazML()
+    else:
+        klucz = os.environ.get("MAILERLITE_API_KEY")
+        if not klucz:
+            sys.exit("Brak zmiennej MAILERLITE_API_KEY. Token: MailerLite → Integracje → MailerLite API → Wygeneruj nowy token. "
+                     "Chcesz najpierw zobaczyć przykładowy raport bez tokena? Uruchom z --pokaz.")
+        ml = ML(klucz)
     dzis = dt.date.today()
     od = (dzis - dt.timedelta(days=a.dni)).isoformat()
-    D = {"data_audytu": dzis.isoformat(), "okno_dni": a.dni, "od": od}
+    D = {"data_audytu": dzis.isoformat(), "okno_dni": a.dni, "od": od, "pokaz": a.pokaz}
 
     print("1/5 grupy…", file=sys.stderr)
     D["grupy"] = sorted(({"nazwa": g.get("name"), "aktywni": int(liczba(g.get("active_count"))),
@@ -441,6 +447,7 @@ def zl(x):
         return str(x)
 
 
+STOPKA_GWIAZDKA = "Audyt się przydał? Zostaw gwiazdkę: https://github.com/Autilos/audyt-mailingu albo krótką opinię: https://github.com/Autilos/audyt-mailingu/discussions/3"
 STOPKA_RAPORTU = "To podstawowy audyt. Chcesz pełny audyt albo wdrożenie poprawek? Napisz do mnie: https://marketingkrokpokroku.pl/audyt-mailingu/?zrodlo=raport#kontakt (Wojciech Nowak) albo wnowak@autilo.eu"
 
 KLUCZ_LISTY = {"Powitanie": "powitanie_brak", "Porzucony koszyk": "koszyk_brak", "Po zakupie": "po_zakupie_brak",
@@ -489,6 +496,7 @@ def sekcja_rekomendacji(D):
         rs = rekomendacja_serii(g["maile"])
         (serie.append((rs[0], rs[1], g["automat"])) if rs else dobre.append(g["automat"]))
     lista = uloz(k, serie)
+    D["_rekomendacje"] = lista
     L = ["## Rekomendacje — co zrobić i w jakiej kolejności", "",
          "Kolejność: najpierw dane (bez nich automaty nie działają), potem dostarczalność, potem automaty od najbardziej dochodowych. Rekomendacje dotyczą tylko tego, co wykrył audyt.", ""]
     for i, (tyt, tresc, szcz) in enumerate(lista, 1):
@@ -501,8 +509,10 @@ def sekcja_rekomendacji(D):
 
 
 def raport(D):
-    L = [f"# Audyt e-mail marketingu — MailerLite ({D['data_audytu']})", "",
-         f"Okres audytu kampanii: ostatnie {D['okno_dni']} dni (od {D['od']}). Tylko odczyt, wyłącznie statystyki, ustawienia i treść maili — bez danych osobowych.", ""]
+    L = [f"# Audyt e-mail marketingu — MailerLite ({D['data_audytu']})", ""]
+    if D.get("pokaz"):
+        L += ["> **Raport pokazowy — dane zmyślone.** Fikcyjny sklep z herbatą, bez połączenia z żadnym kontem. Tak wygląda raport z prawdziwego konta.", ""]
+    L += [f"Okres audytu kampanii: ostatnie {D['okno_dni']} dni (od {D['od']}). Tylko odczyt, wyłącznie statystyki, ustawienia i treść maili — bez danych osobowych.", ""]
     naj = []
     brak = [x for x in D["lista_kontrolna"] if x["stan"] != "działa"]
     if brak:
@@ -531,6 +541,7 @@ def raport(D):
     elif n_tyg > 3:
         naj.append(f"Kampanie: średnio {n_tyg:.1f} tygodniowo — ryzyko zmęczenia bazy.".replace(".", ",", 1))
     L += ["## Najważniejsze", ""] + [f"{i}. {t}" for i, t in enumerate(naj or ["Nie znaleziono poważnych problemów w danych dostępnych przez API."], 1)] + [""]
+    D["_najwazniejsze"] = naj
     L += sekcja_rekomendacji(D)
 
     L += ["## Lista kontrolna automatów sklepu", "", "| Automat | Stan | Znalezione |", "|---|---|---|"]
@@ -611,7 +622,9 @@ def raport(D):
         L += ["**Niedostępne na tym koncie (403/404 — funkcja może nie wchodzić w plan):** " + ", ".join(f"`{x}`" for x in D["niedostepne"][:8]), ""]
     if D.get("ostrzezenia"):
         L += ["**Ostrzeżenia:**", ""] + [f"- {x}" for x in D["ostrzezenia"]] + [""]
-    L += [f"_Zapytań do API: {D['zapytan_api']}._", "", "---", "", STOPKA_RAPORTU, ""]
+    L += [f"_Zapytań do API: {D['zapytan_api']}._", ""]
+    L += sekcja_dla_ai(D.get("_najwazniejsze") or [], D.get("_rekomendacje") or [], ["Zamówień i przychodu z maili (API zwraca zamówienia z danymi kupującego — nie pobieramy).", "Statusu domeny nadawcy i przyrostu bazy w czasie.", "Czy oferta w mailach ma sens — treść maili służy tylko do podziału serii powitalnej."])
+    L += ["---", "", STOPKA_RAPORTU, "", STOPKA_GWIAZDKA, ""]
     return "\n".join(L)
 
 

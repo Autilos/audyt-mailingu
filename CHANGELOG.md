@@ -1,5 +1,14 @@
 # Zmiany
 
+## 0.3.1 — 2026-11-21
+
+- Raport pokazowy bez klucza i bez internetu: `--pokaz` w obu skryptach („zrób pokazowy audyt”), zmyślony sklep z herbatą, adnotacja „Raport pokazowy — dane zmyślone”.
+- Plik `.md` zawsze obok PDF, na końcu sekcja „Dla asystenta AI” (problemy, zadania `- [ ]` z miejscem w panelu, czego audyt nie sprawdził, kontakt). W PDF ta sekcja jest pomijana.
+- PDF: wszystkie adresy WWW i e-mail są klikalnymi linkami.
+- Nowy skill `audyt-pomoc`: co zrobić samemu, co zlecić, kontakt bez cen, zgłoszenie błędu bez danych z konta; szablon `.github/ISSUE_TEMPLATE/blad.md`.
+- Gwiazdka i opinie: odznaka w README, wątek opinii w Discussions, krótka linijka w stopce raportu.
+- Poprawka: słowo „ponown” łapało „Witaj ponownie” i fałszywie oznaczało automat drugiego zakupu jako działający.
+
 ## 0.3.0 — 2026-11-21
 
 **Zero danych osobowych**
