@@ -86,6 +86,8 @@ section{scroll-margin-top:60px;padding:68px 0;border-bottom:1px solid var(--lini
 table{width:100%;border-collapse:collapse;font-size:.93rem;margin:12px 0}
 th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--linia);vertical-align:top}
 th{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--zloto);background:var(--tlo2)}
+.odznaka{margin:18px 0 0;max-width:760px;background:#1f5132;border:1px solid #3c8a5a;border-left:4px solid #7fd19b;border-radius:6px;padding:12px 16px;font-size:.95rem;color:#eaf7ee}
+.odznaka b{color:#fff}
 .uwaga{min-width:0;overflow-wrap:anywhere;background:var(--tlo2);border-left:4px solid var(--zloto);padding:14px 18px;margin:16px 0;font-size:.95rem}
 .uwaga.stop{border-left-color:var(--czerwien);background:#3f0a10}
 .uwaga b{color:var(--zloto2)}
@@ -196,15 +198,16 @@ footer .tm{font-size:.78rem;color:#ad9c80}
     <div class="kicker">Skill do Claude Code · darmowy · kod otwarty (MIT)</div>
     <h1>Audyt e-mail marketingu sklepu</h1>
     <div class="pod">GetResponse · MailerLite · tylko odczyt</div>
-    <p class="lead">Skill robi audyt e-mail marketingu sklepu: czyta Twoje konto przez oficjalne API i mówi wprost, co nie działa: automaty, przez które nikt nie przechodzi, maile bez linku do wypisu, sklep, który nie przesyła zamówień, i maile, które nie liczą sprzedaży. Wynik dostajesz jako raport po polsku, z najważniejszymi problemami na górze.</p>
+    <p class="lead">Skill robi audyt e-mail marketingu sklepu: czyta Twoje konto przez oficjalne API i mówi wprost, co nie działa: automaty, przez które nikt nie przechodzi, maile bez linku do wypisu, sklep, który nie przesyła zamówień do GetResponse, i maile, które nie liczą sprzedaży. Wynik dostajesz jako raport po polsku: najpierw najważniejsze problemy, potem rekomendacje w kolejności wykonania. Raport możesz zamienić na PDF dołączonym skryptem (potrzebna przeglądarka Chrome, Chromium albo Edge).</p>
+    <div class="odznaka"><b>Nie pobiera danych osobowych kontaktów ani kupujących</b>: tylko statystyki, ustawienia i treść maili. W MailerLite nie pobiera nawet zamówień, bo API zwraca je razem z danymi kupującego.</div>
     <div class="przyciski">
       <a class="btn pelny" href="#instalacja">Jak zainstalować</a>
       <a class="btn pusty" href="https://github.com/Autilos/audyt-mailingu">Kod na GitHubie</a>
     </div>
     <div class="status">
       <div><span>Dostęp do konta</span><b>tylko odczyt (GET)</b></div>
-      <div><span>Dane kontaktów</span><b>nie pobiera</b></div>
-      <div><span>Raport</span><b>plik .md na Twoim dysku</b></div>
+      <div><span>Dane osobowe</span><b>nie pobiera</b></div>
+      <div><span>Raport</span><b>.md albo PDF na Twoim dysku</b></div>
       <div><span>Licencja</span><b>MIT</b></div>
     </div>
   </div>
@@ -228,7 +231,7 @@ footer .tm{font-size:.78rem;color:#ad9c80}
         <div class="ikona" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg></div>
         <h3>Claude Code czyta konto</h3>
         <p>Uruchamia skrypt, który wysyła tylko zapytania GET do oficjalnego API. Inne adresy i przekierowania są odrzucane. Na koncie nic się nie zmienia.</p>
-        <span class="tag">tylko odczyt · bez danych kontaktów</span>
+        <span class="tag">tylko odczyt · bez danych osobowych</span>
       </div>
       <div class="strzalka" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#d7bb79" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
       <div class="krok3" role="listitem">
@@ -267,7 +270,16 @@ footer .tm{font-size:.78rem;color:#ad9c80}
       <div class="karta"><div class="nr">05</div><h3>Zamówienia ze sklepu</h3><p>Czy sklep w ogóle przesyła zamówienia do systemu mailowego i ilu kupujących nie trafia do bazy.</p></div>
       <div class="karta"><div class="nr">06</div><h3>Liczenie sprzedaży z maili</h3><p>Czy maile mają włączone śledzenie e-commerce, czyli przypisywanie sprzedaży do konkretnego maila.</p></div>
     </div>
-    <div class="uwaga"><b>W MailerLite dodatkowo:</b> to, co MailerLite sam oznacza w API: automaty zepsute albo niedokończone, maile w automatach bez linku do wypisu i przyciski bez linku.</div>
+    <div class="kicker" style="margin-top:34px">Nowe w wersji 0.3</div>
+    <div class="siatka">
+      <div class="karta"><div class="nr">07</div><h3>Seria powitalna</h3><p>Ile maili dostaje nowa osoba, w jakie dni, czy seria działa i czy każdy mail jest sprzedażowy, wartościowy czy mieszany. Podział to ocena po słowach i elementach maila (kod, procent, ceny, przyciski), z podanym powodem przy każdym mailu — może się pomylić.</p></div>
+      <div class="karta"><div class="nr">08</div><h3>Rekomendacje do problemów</h3><p>Do każdego wykrytego problemu konkretna rada i kolejność: najpierw dane, potem dostarczalność, potem automaty. Gdy seria powitalna jest dobra, raport mówi, że jest dobra.</p></div>
+      <div class="karta"><div class="nr">09</div><h3>Formularze zapisu</h3><p>Wyświetlenia, zapisy i konwersja każdego formularza. W GetResponse wymaga, żeby klucz API miał uprawnienia do formularzy — jeśli nie ma, raport to mówi.</p></div>
+      <div class="karta"><div class="nr">10</div><h3>Zdrowie bazy</h3><p>GetResponse: ile kontaktów przybyło i ubyło w okresie audytu, skąd przychodzą zapisy i dlaczego kontakty odchodzą. MailerLite: stan grup — aktywni, wypisani, odbicia, spam.</p></div>
+      <div class="karta"><div class="nr">11</div><h3>Dostarczalność</h3><p>GetResponse: czy domena nadawcy jest potwierdzona i czy są ostrzeżenia DKIM albo DMARC, z osobną uwagą dla adresu w darmowej poczcie.</p></div>
+      <div class="karta"><div class="nr">12</div><h3>Przychód przypisany do maili</h3><p>Ile sprzedaży GetResponse przypisuje do maili (zakup po kliknięciu). Ta kwota obejmuje tylko zakupy po kliknięciu w mail, a nie całą sprzedaż sklepu. Jeśli podasz dane sklepu, raport porówna z nimi liczbę zamówień.</p></div>
+    </div>
+    <div class="uwaga"><b>W MailerLite dodatkowo:</b> to, co MailerLite sam oznacza w API: automaty zepsute albo niedokończone, maile w automatach bez linku do wypisu i przyciski bez linku. <b>W MailerLite audyt nie czyta zamówień</b> (API zwraca je z danymi kupującego), więc sprzedaż z maili sprawdzisz w panelu.</div>
   </div>
 </section>
 
@@ -292,7 +304,7 @@ footer .tm{font-size:.78rem;color:#ad9c80}
       </div>
       <div class="mapa-wiersz" role="row">
         <div class="mapa-nr" role="cell">3</div>
-        <div role="cell"><h3>Po zakupie</h3><small>podziękowanie, opinia, cross-sell</small></div>
+        <div role="cell"><h3>Po zakupie</h3><small>podziękowanie, opinia, kolejny produkt</small></div>
         <div role="cell" class="tak"><span class="etk">GetResponse</span><b>✓</b> szuka po nazwie automatu i tematach maili</div>
         <div role="cell" class="tak"><span class="etk">MailerLite</span><b>✓</b> po wyzwalaczu zakupu</div>
       </div>
@@ -304,7 +316,7 @@ footer .tm{font-size:.78rem;color:#ad9c80}
       </div>
       <div class="mapa-wiersz" role="row">
         <div class="mapa-nr" role="cell">5</div>
-        <div role="cell"><h3>Reaktywacja</h3><small>nieaktywni klienci (win-back)</small></div>
+        <div role="cell"><h3>Reaktywacja</h3><small>nieaktywni klienci</small></div>
         <div role="cell" class="tak"><span class="etk">GetResponse</span><b>✓</b> szuka po nazwie automatu i tematach maili</div>
         <div role="cell" class="tak"><span class="etk">MailerLite</span><b>✓</b> po nazwie; razem z drugim zakupem jako jedna pozycja</div>
       </div>
@@ -403,8 +415,8 @@ claude</pre><button type="button">Kopiuj</button></div>
       <div class="duzy">5</div>
       <div>
         <h3>Poproś o audyt</h3>
-        <div class="kod"><pre>zrób audyt mojego GetResponse</pre><button type="button">Kopiuj</button></div>
-        <p>albo „zrób audyt mojego MailerLite”. Jeśli napiszesz tylko „zrób audyt mailingu”, Claude zapyta, którego systemu używasz. Raport zapisze się w bieżącym katalogu jako <code>audyt-getresponse.md</code> albo <code>audyt-mailerlite.md</code>.</p>
+        <div class="kod"><pre>zrób audyt mailingu</pre><button type="button">Kopiuj</button></div>
+        <p>Claude poprowadzi Cię krok po kroku: zapyta, którego systemu używasz, pokaże, skąd wziąć klucz i jak go ustawić bez wklejania do czatu (Mac, Linux i Windows), sprawdzi połączenie jednym zapytaniem i uruchomi audyt. Raport zapisze się w bieżącym katalogu jako <code>audyt-getresponse.md</code> albo <code>audyt-mailerlite.md</code>; na prośbę zrobi z niego PDF.</p>
       </div>
     </div>
 
@@ -433,23 +445,36 @@ python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --dni 90 --raport 
     <p class="lead">Fragment raportu GetResponse w układzie, który generuje skrypt. Sklep, nazwy i liczby są zmyślone.</p>
     <div class="raport">
       <h4>Audyt e-mail marketingu — GetResponse (2026-11-21)</h4>
-      <div class="meta">Okno newsletterów i zamówień: ostatnie 90 dni (od 2026-08-23). Tylko odczyt, dane zbiorcze, bez danych osobowych.</div>
+      <div class="meta">Okres audytu newsletterów i zamówień: ostatnie 90 dni (od 2026-08-23). Tylko odczyt, dane zbiorcze, bez danych osobowych.</div>
       <h5>Najważniejsze</h5>
       <ol>
         <li>Brakuje albo nie działa 3 z 6 podstawowych automatów: porzucone przeglądanie, drugi / ponowny zakup, reaktywacja nieaktywnych klientów.</li>
         <li>1 automat jest włączony, ale nikt przez niego nie przeszedł. Sprawdź w panelu warunek startu.</li>
-        <li>Sklep „Sklep Przykładowy” jest podłączony do GetResponse, ale API nie zwróciło zamówień z tego okresu (ostatnie zwrócone zamówienie: 2026-05-14). Jeśli sklep w tym czasie sprzedawał, integracja najpewniej nie przesyła zamówień.</li>
+        <li>Sklep „[nazwa zmyślona]” jest podłączony do GetResponse, ale API nie zwróciło zamówień z tego okresu (ostatnie zwrócone zamówienie: 2026-05-14). Jeśli sklep w tym czasie sprzedawał, integracja najpewniej nie przesyła zamówień.</li>
         <li>7 z 19 wysyłanych maili nie ma włączonego śledzenia e-commerce — sprzedaż z nich najpewniej nie jest przypisywana.</li>
       </ol>
+      <h5>Rekomendacje — co zrobić i w jakiej kolejności</h5>
+      <ol>
+        <li><b>Napraw przesyłanie zamówień ze sklepu.</b> Bez zamówień w systemie mailowym nie zadziałają porzucony koszyk, maile po zakupie, drugi zakup ani liczenie przychodu z maili. Zrób zamówienie testowe i sprawdź, czy pojawia się przy kontakcie.</li>
+        <li><b>Popraw serię powitalną.</b> Między maile z ofertą wstaw co najmniej jeden mail bez oferty: historia marki, poradnik albo opinie klientów. Rozciągnij serię na około 8–10 dni (np. dzień 0, 2, 4, 6, 8).</li>
+        <li><b>Włącz śledzenie sprzedaży w każdym mailu</b> (7 maili) i dodaj parametry UTM do linków.</li>
+      </ol>
+      <h5>Seria powitalna (sprzedażowe vs wartościowe)</h5>
+      <div class="tabela-scroll"><table>
+        <tr><th>Dzień</th><th>Temat</th><th>Wysłane</th><th>Kliknięcia</th><th>Klasa</th><th>Dlaczego</th></tr>
+        <tr><td>0</td><td>Witaj! Twój kod −10% na pierwsze zakupy</td><td>1 240</td><td>6,1%</td><td>sprzedażowy</td><td>kod rabatowy, procent rabatu, link do produktu</td></tr>
+        <tr><td>2</td><td>Ostatni dzień kodu −10%</td><td>1 105</td><td>3,4%</td><td>sprzedażowy</td><td>kod rabatowy, procent rabatu</td></tr>
+      </table></div>
+      <p class="meta">Wniosek: seria kończy się w dniu 2 i wszystkie maile są sprzedażowe. Podział to ocena po słowach i elementach maila (kod, procent, ceny, przyciski) — może się pomylić.</p>
       <h5>Lista kontrolna automatów sklepu</h5>
       <div class="tabela-scroll"><table>
         <tr><th>Automat</th><th>Stan</th><th>Znalezione po nazwie</th></tr>
-        <tr><td>Powitanie nowego subskrybenta</td><td>✅ działa</td><td>Powitanie — seria 3 maili</td></tr>
+        <tr><td>Powitanie nowego subskrybenta</td><td>✅ działa</td><td>Witaj w sklepie</td></tr>
         <tr><td>Porzucony koszyk</td><td>✅ działa</td><td>Koszyk 1h + 24h</td></tr>
-        <tr><td>Po zakupie (podziękowanie, opinia, cross-sell)</td><td>✅ działa</td><td>Dziękujemy za zakup</td></tr>
+        <tr><td>Po zakupie (podziękowanie, opinia, kolejny produkt)</td><td>✅ działa</td><td>Dziękujemy za zakup</td></tr>
         <tr><td>Porzucone przeglądanie (oglądał produkt, nie dodał do koszyka)</td><td>❓ nie znaleziono po nazwie — sprawdź w panelu</td><td>—</td></tr>
         <tr><td>Drugi / ponowny zakup (przypomnienie o uzupełnieniu)</td><td>⚠️ jest, ale nie działa (wyłączony albo nikt nie przechodzi)</td><td>Uzupełnij zapas herbaty</td></tr>
-        <tr><td>Reaktywacja nieaktywnych klientów (win-back)</td><td>❓ nie znaleziono po nazwie — sprawdź w panelu</td><td>—</td></tr>
+        <tr><td>Reaktywacja nieaktywnych klientów</td><td>❓ nie znaleziono po nazwie — sprawdź w panelu</td><td>—</td></tr>
       </table></div>
       <div class="fikcja">Dane fikcyjne · przykład układu raportu</div>
     </div>
@@ -462,7 +487,7 @@ python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --dni 90 --raport 
     <h2>Klucz zostaje u Ciebie, konto zostaje nietknięte</h2>
     <div class="siatka dwa">
       <div class="karta"><div class="nr">Tylko odczyt</div><p>Skrypt wysyła wyłącznie zapytania GET. Niczego nie zmienia, nie wysyła maili, nie kasuje kontaktów. Kod jest krótki i jawny, możesz go przeczytać przed uruchomieniem.</p></div>
-      <div class="karta"><div class="nr">Bez danych kontaktów</div><p>Raport ma liczby zbiorcze oraz nazwy automatów, list i tematy maili z Twojego konta. Adresów e-mail i danych subskrybentów w raporcie nie ma.</p></div>
+      <div class="karta"><div class="nr">Bez danych osobowych</div><p>Skill nie pobiera danych osobowych kontaktów ani kupujących — wyłącznie statystyki, ustawienia i treść maili. W kodzie jest lista dozwolonych zapytań; każde inne przerywa audyt. W GetResponse zamówienia są czytane tylko z polami: numer, kwota, data, status i czy jest przypisany kontakt. W MailerLite zamówień audyt nie czyta wcale.</p></div>
       <div class="karta"><div class="nr">Klucz bez pośrednika</div><p>Skrypt czyta klucz ze zmiennej środowiskowej na Twoim komputerze i wysyła go tylko do oficjalnego API GetResponse albo MailerLite. Inne adresy i przekierowania są odrzucane, a klucz nie trafia do raportu ani do komunikatów o błędach.</p></div>
       <div class="karta"><div class="nr">Wyniki na Twoim dysku</div><p>Raport to plik <code>audyt-*.md</code> w bieżącym katalogu. W Claude Code jego treść trafia do rozmowy, tak jak każdy plik, który Claude czyta.</p></div>
     </div>
@@ -482,7 +507,15 @@ python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --dni 90 --raport 
     <details><summary>Czy automaty rozpoznaje bezbłędnie?</summary><p>W MailerLite audyt rozpoznaje automat po wyzwalaczu, a przy wyzwalaczach ogólnych po nazwie. API GetResponse nie pokazuje warunków automatów, więc tam rozpoznanie idzie po nazwie automatu i tematach maili. Znak „❓” oznacza: sprawdź w panelu, automat może istnieć pod inną nazwą.</p></details>
     <details><summary>Ile trwa sam audyt?</summary><p>MailerLite: mały sklep to kilkanaście sekund. GetResponse: od kilkudziesięciu sekund do kilku minut przy tysiącach zamówień miesięcznie, bo GetResponse wolno oddaje listę zamówień.</p></details>
     <details><summary>Mam GetResponse MAX.</summary><p>Skrypt przyjmuje domenę konta (<code>--max-domena</code>) i adres API GetResponse MAX (<code>--api</code>). Inny adres API niż oficjalne adresy GetResponse jest celowo odrzucany.</p></details>
-    <details><summary>Działa na Windows?</summary><p>Claude Code działa na Windows. Komendy z instrukcji są napisane dla terminala bash i zsh (Mac, Linux, Git Bash na Windows).</p></details>
+    <details><summary>Działa na Windows?</summary><p>Claude Code działa na Windows. Komendy z instrukcji są napisane dla terminala bash i zsh (Mac, Linux, Git Bash na Windows). W PowerShell klucz ustawisz tak: <code>$env:GETRESPONSE_API_KEY = Read-Host -MaskInput "Klucz API"</code> — przy instalacji rozmową Claude pokaże właściwą komendę.</p></details>
+  </div>
+</section>
+
+<section id="pelny-audyt">
+  <div class="w">
+    <div class="kicker">Pełny audyt i poprawki</div>
+    <h2>Chcesz pełny audyt albo wdrożenie poprawek?</h2>
+    <p class="lead">To podstawowy audyt. Chcesz pełny audyt (z ręcznym przejściem automatów, ścieżki zakupu i sprzedaży z maili) albo wdrożenie poprawek? Napisz do mnie przez <a href="#kontakt">formularz niżej</a> albo na <a href="mailto:wnowak@autilo.eu?subject=Pe%C5%82ny%20audyt%20mailingu">wnowak@autilo.eu</a> (Wojciech Nowak).</p>
   </div>
 </section>
 
