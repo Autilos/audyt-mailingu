@@ -32,6 +32,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from seria_powitalna import klasyfikuj, wniosek_serii  # noqa: E402
 from rekomendacje import rekomendacja_serii, uloz, sekcja_dla_ai  # noqa: E402
+from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku  # noqa: E402
 
 PRZERWA = 0.3  # s między zapytaniami; limit GR to 80/s, ale w praktyce ~4/s bez 429
 MAX_STRON_ZAMOWIEN = 120  # 120 × 500 zamówień — bezpiecznik dla bardzo dużych sklepów
@@ -84,8 +85,9 @@ LISTA_KONTROLNA = [
 
 
 class GR:
-    def __init__(self, klucz, api, max_domena=None):
+    def __init__(self, klucz, api, max_domena=None, pamiec=None):
         self.api = api.rstrip("/")
+        self.pamiec = pamiec
         self.h = {"X-Auth-Token": "api-key " + klucz, "Accept": "application/json"}
         if max_domena:
             self.h["X-Domain"] = max_domena
@@ -101,6 +103,9 @@ class GR:
             sys.exit(f"Ścieżka spoza listy dozwolonych ({sciezka}) — przerwano. Audyt nie czyta danych osobowych.")
         if params:
             url += ("&" if "?" in url else "?") + urllib.parse.urlencode(params, safe="[]")
+        z_pamieci = self.pamiec.czytaj(url) if self.pamiec else None
+        if z_pamieci is not None:
+            return z_pamieci["d"], z_pamieci["h"]
         for proba in range(5):
             time.sleep(PRZERWA)
             self.zapytan += 1
@@ -108,12 +113,16 @@ class GR:
                 r = _OTWIERACZ.open(urllib.request.Request(url, headers=self.h), timeout=240)
                 surowe = r.read() or b"null"
                 try:
-                    return json.loads(surowe), {k.lower(): v for k, v in r.headers.items()}
+                    d = json.loads(surowe)
+                    h = {k.lower(): v for k, v in r.headers.items() if k.lower() in ("totalpages", "totalcount")}
+                    if self.pamiec:
+                        self.pamiec.zapisz(url, {"d": d, "h": h})
+                    return d, h
                 except ValueError:
                     sys.exit(f"API zwróciło odpowiedź, która nie jest JSON-em ({sciezka}). Sprawdź adres --api i połączenie (proxy, zapora).")
             except (socket.timeout, TimeoutError, http.client.IncompleteRead, ConnectionError):
                 if proba < 4:
-                    print("  serwer odpowiada wolno — ponawiam", file=sys.stderr)
+                    print("  serwer GetResponse odpowiada wolno — ponawiam", file=sys.stderr, flush=True)
                     time.sleep(5 * (proba + 1))
                     continue
                 raise
@@ -321,6 +330,23 @@ def nadawcy(gr):
     return wynik
 
 
+def popraw_powitanie(D):
+    """✅ przy powitaniu tylko wtedy, gdy powitanie działa na największej liście z serią autoresponderów.
+    Jeśli na największej liście seria jest wyłączona, a działa tylko na mniejszej — stan „działa częściowo”."""
+    kontakty = {x["nazwa"]: x["kontakty"] for x in D.get("listy") or []}
+    grupy = [g for g in D.get("seria_powitalna") or [] if g["zrodlo"] == "autorespondery"]
+    if len(grupy) < 2:
+        return
+    najwieksza = max(grupy, key=lambda g: kontakty.get(g["lista"], 0))
+    if any(m["wlaczony"] for m in najwieksza["maile"]):
+        return
+    dzialajace = [g["lista"] for g in grupy if any(m["wlaczony"] and m["wyslane"] for m in g["maile"])]
+    for x in D["lista_kontrolna"]:
+        if x["automat"].startswith("Powitanie") and x["stan"] == "działa":
+            x["stan"] = (f"jest, ale na największej liście „{najwieksza['lista']}” ({zl(kontakty.get(najwieksza['lista'], 0))} kontaktów) "
+                         "powitanie jest wyłączone" + (f"; działa tylko na: {', '.join(dzialajace)}" if dzialajace else ""))
+
+
 MAX_MAILI_SERII = 20  # ile treści maili pobrać do klasyfikacji (każdy = 1 zapytanie)
 
 
@@ -366,7 +392,10 @@ def seria(gr, D):
 
 def main():
     ap = argparse.ArgumentParser(description="Audyt GetResponse (tylko odczyt)")
-    ap.add_argument("--dni", type=int, default=90, help="okno dla newsletterów i zamówień (domyślnie 90)")
+    ap.add_argument("--dni", type=int, default=30, help="okres audytu newsletterów i zamówień w dniach (domyślnie 30; pełne 90 na prośbę)")
+    ap.add_argument("--postep", default=None, help="plik postępu (domyślnie obok raportu: <raport>.postep.txt)")
+    ap.add_argument("--plik-klucza", default="~/.config/audyt-mailingu/getresponse.key", help="plik z kluczem, gdy nie ma zmiennej GETRESPONSE_API_KEY")
+    ap.add_argument("--bez-pamieci", action="store_true", help="nie używaj pamięci odpowiedzi API (pobierz wszystko od nowa)")
     ap.add_argument("--raport", default="audyt-getresponse.md", help="plik raportu Markdown")
     ap.add_argument("--json", default="", help="opcjonalnie: surowe dane zbiorcze do pliku JSON")
     ap.add_argument("--api", default="https://api.getresponse.com/v3")
@@ -383,15 +412,16 @@ def main():
         sys.exit("--api musi być jednym z oficjalnych adresów API GetResponse: " + ", ".join(DOZWOLONE_API))
     if a.dni < 1:
         sys.exit("--dni musi być co najmniej 1.")
+    postep = Postep(a.postep or (os.path.splitext(a.raport)[0] + ".postep.txt"))
     if a.pokaz:
         from pokaz_gr import PokazGR
         gr = PokazGR()
     else:
-        klucz = os.environ.get("GETRESPONSE_API_KEY")
+        klucz = klucz_z_env_albo_pliku("GETRESPONSE_API_KEY", a.plik_klucza)
         if not klucz:
-            sys.exit("Brak zmiennej GETRESPONSE_API_KEY. Klucz: GetResponse → Menu → Integracje i API → API. "
+            sys.exit("Brak klucza: nie ma zmiennej GETRESPONSE_API_KEY ani pliku " + a.plik_klucza + ". Klucz: GetResponse → Menu → Integracje i API → API. "
                      "Chcesz najpierw zobaczyć przykładowy raport bez klucza? Uruchom z --pokaz.")
-        gr = GR(klucz, a.api, a.max_domena)
+        gr = GR(klucz, a.api, a.max_domena, Pamiec("getresponse:" + a.api, klucz, wlaczona=not a.bez_pamieci))
     if a.test_polaczenia:
         d, _ = gr.get("/campaigns", {"perPage": 1, "fields": "campaignId"})
         print("Połączenie działa — klucz ma dostęp do konta (odczyt list)." if d is not None else "API odpowiedziało, ale bez danych.")
@@ -402,7 +432,7 @@ def main():
     D = {"data_audytu": dzis.isoformat(), "okno_dni": a.dni, "od": od.isoformat(),
          "sklep_podany": {"przychod": a.przychod_sklepu, "zamowienia": a.zamowienia_sklepu}, "pokaz": a.pokaz}
 
-    print("1/6 listy kontaktów…", file=sys.stderr)
+    postep("1/6 listy kontaktów i zdrowie bazy")
     listy = gr.wszystkie("/campaigns", {"fields": "campaignId,name"})
     D["listy"] = []
     for l in listy:
@@ -412,15 +442,17 @@ def main():
     D["listy"].sort(key=lambda x: -x["kontakty"])
     D["zdrowie_bazy"] = zdrowie_bazy(gr, [l["campaignId"] for l in listy], od, dzis)
 
-    print("   formularze i adresy nadawcy…", file=sys.stderr)
+    postep("1/6 formularze i adresy nadawcy")
     D["formularze"] = formularze(gr)
     D["nadawcy"] = nadawcy(gr)
     nazwy_list = {l["campaignId"]: l.get("name") for l in listy}
 
-    print("2/6 automatyzacje…", file=sys.stderr)
+    postep("2/6 automatyzacje")
     wf = gr.wszystkie("/workflow")
     D["automaty"] = []
-    for w in wf:
+    for i, w in enumerate(wf, 1):
+        if i % 10 == 0 or i == len(wf):
+            postep(f"2/6 automatyzacje {i}/{len(wf)}")
         d, _ = gr.get(f"/workflow/{w['workflowId']}")
         w = d or w
         st = w.get("subscriberStatistics") or {}
@@ -434,11 +466,13 @@ def main():
         D["automaty"].append({"nazwa": w.get("name"), "aktywny": aktywny, "start": start,
                               "zakonczyli": zakonczyli, "w_trakcie": w_trakcie, "uwagi": uwagi})
 
-    print("3/6 maile z automatów…", file=sys.stderr)
+    postep("3/6 maile z automatów")
     maile = gr.wszystkie("/newsletters", {"query[type]": "automation",
                                           "fields": "newsletterId,name,subject,status,flags,createdOn"})
     D["maile_automatow"] = []
-    for n in maile:
+    for i, n in enumerate(maile, 1):
+        if i % 10 == 0 or i == len(maile):
+            postep(f"3/6 maile z automatów {i}/{len(maile)}")
         m = stat_maila(gr, n["newsletterId"])
         m.update({"nazwa": n.get("name"), "temat": czysc(n.get("subject")), "status": n.get("status"),
                   "utworzony": (n.get("createdOn") or "")[:10], "id": n["newsletterId"], "typ": "automat",
@@ -447,7 +481,7 @@ def main():
         D["maile_automatow"].append(m)
     D["maile_automatow"].sort(key=lambda x: -x["wyslane"])
 
-    print("4/6 autorespondery (klasyczne)…", file=sys.stderr)
+    postep("4/6 autorespondery")
     ar = gr.wszystkie("/autoresponders")
     D["autorespondery"] = []
     for x in ar:
@@ -473,12 +507,14 @@ def main():
     D["maile_automatow"] += D["autorespondery"]
     D["maile_automatow"].sort(key=lambda x: -x["wyslane"])
 
-    print(f"5/6 newslettery z {a.dni} dni…", file=sys.stderr)
+    postep(f"5/6 newslettery z {a.dni} dni")
     bc = gr.wszystkie("/newsletters", {"query[type]": "broadcast", "query[sendOn][from]": od.isoformat(),
                                        "sort[sendOn]": "desc",
                                        "fields": "newsletterId,name,subject,status,flags,sendOn"})
     D["newslettery"] = []
-    for n in bc:
+    for i, n in enumerate(bc, 1):
+        if i % 10 == 0 or i == len(bc):
+            postep(f"5/6 newslettery {i}/{len(bc)}")
         if not n.get("sendOn") or n["sendOn"][:19] > teraz:
             continue  # zaplanowane na przyszłość
         m = stat_maila(gr, n["newsletterId"])
@@ -487,7 +523,7 @@ def main():
         m["problemy"] = problemy_maila(m)
         D["newslettery"].append(m)
 
-    print("6/6 sklep…", file=sys.stderr)
+    postep("6/6 sklep i zamówienia")
     D["sklepy"] = []
     for s in gr.wszystkie("/shops") or []:
         sid = s["shopId"]
@@ -509,6 +545,7 @@ def main():
                                                        "fields": "orderId,totalPrice,processedAt,contactId,status"})
                 if not d:
                     break
+                postep(f"6/6 sklep: strona zamówień {strona} z {h.get('totalpages') or '?'}")
                 for o in d:
                     t = (o.get("processedAt") or "")[:10]
                     if t and t < od.isoformat():
@@ -546,8 +583,9 @@ def main():
             stan = "nie znaleziono po nazwie — sprawdź w panelu"
         D["lista_kontrolna"].append({"automat": nazwa, "stan": stan,
                                      "trafienia": [x["nazwa"] for x in auto][:3] + [x["temat"] for x in maile_tr][:2]})
-    print("seria powitalna…", file=sys.stderr)
+    postep("seria powitalna i raport")
     D["seria_powitalna"] = seria(gr, D)
+    popraw_powitanie(D)
     D["zapytan_api"] = gr.zapytan
     D["niedostepne"] = gr.niedostepne
     D["ostrzezenia"] = gr.ostrzezenia
@@ -557,7 +595,8 @@ def main():
     if a.json:
         with open(a.json, "w", encoding="utf-8") as plik:
             json.dump(D, plik, ensure_ascii=False, indent=1)
-    print(f"Gotowe: {a.raport} ({gr.zapytan} zapytań do API)", file=sys.stderr)
+    pam = getattr(gr, "pamiec", None)
+    postep(f"Gotowe: {a.raport} ({gr.zapytan} zapytań do API" + (f", {pam.trafien} z pamięci" if pam and pam.trafien else "") + ")")
 
 
 def odm(n, jeden, kilka, wiele):
@@ -807,7 +846,8 @@ def raport(D):
 
     L += ["## Formularze zapisu", ""]
     if D.get("formularze") is None:
-        L += ["Klucz API nie ma uprawnień do formularzy (GetResponse zwrócił „brak dostępu”) — sprawdź w panelu: Formularze. Nowe pop-upy GetResponse API pokazuje osobno i ten audyt ich nie liczy.", ""]
+        L += ["**Tę część audyt pominął.** Klucz API nie ma uprawnienia do odczytu formularzy — GetResponse często tak ustawia zwykłe klucze, to nie jest błąd konta ani audytu. "
+              "Wyniki formularzy (wyświetlenia, zapisy, konwersję) zobaczysz w panelu GetResponse w sekcji Formularze. Nowe pop-upy GetResponse i tak są liczone osobno, poza tym audytem.", ""]
     elif not D["formularze"]:
         L += ["Na koncie nie ma formularzy (klasycznych). Nowe pop-upy GetResponse API pokazuje osobno i ten audyt ich nie liczy.", ""]
     else:
@@ -858,8 +898,9 @@ def raport(D):
           "- Przypisanego przychodu per automat (kolumna „Przypisany przychód” na liście automatów).",
           "- Czy na stronie działa śledzenie (Web Connect) potrzebne do automatów przeglądania produktów.", "",
           "- Progi w kolumnie „Problemy” (wypisy > 0,5%, kliknięcia < 0,5%, odbicia > 2%, ocena od 200 wysłanych) to orientacyjne granice z praktyki, nie normy. Skargi: Google wymaga poniżej 0,3% i zaleca poniżej 0,1%.", ""]
-    if D.get("niedostepne"):
-        L += ["**Niedostępne na tym koncie (API zwróciło 404 — funkcja może nie wchodzić w plan):** " + ", ".join(f"`{x}`" for x in D["niedostepne"][:8]), ""]
+    brak404 = [x for x in D.get("niedostepne") or [] if "brak uprawnień" not in x]
+    if brak404:
+        L += ["**Niedostępne na tym koncie (funkcja może nie wchodzić w plan):** " + ", ".join(f"`{x}`" for x in brak404[:8]), ""]
     if D.get("ostrzezenia"):
         L += ["**Ostrzeżenia:**", ""] + [f"- {x}" for x in D["ostrzezenia"]] + [""]
     L += [f"_Zapytań do API: {D['zapytan_api']}._", ""]

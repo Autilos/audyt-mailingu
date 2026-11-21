@@ -30,6 +30,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from seria_powitalna import klasyfikuj, wniosek_serii  # noqa: E402
 from rekomendacje import rekomendacja_serii, uloz, sekcja_dla_ai  # noqa: E402
+from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku  # noqa: E402
 
 API = "https://connect.mailerlite.com/api"
 PRZERWA = 0.55  # limit MailerLite: 120 zapytań na minutę
@@ -73,7 +74,8 @@ LISTA = ["Powitanie", "Porzucony koszyk", "Po zakupie", "Drugi zakup / reaktywac
 
 
 class ML:
-    def __init__(self, klucz):
+    def __init__(self, klucz, pamiec=None):
+        self.pamiec = pamiec
         self.h = {"Authorization": "Bearer " + klucz, "Accept": "application/json"}
         self.zapytan = 0
         self.niedostepne = []
@@ -87,6 +89,9 @@ class ML:
             sys.exit(f"Nieoczekiwany adres spoza API MailerLite — przerwano, token nie zostanie wysłany ({url.split('?')[0]}).")
         if not sciezka_dozwolona(url):
             sys.exit(f"Ścieżka spoza listy dozwolonych ({url.split('?')[0]}) — przerwano. Audyt nie czyta danych osobowych.")
+        z_pamieci = self.pamiec.czytaj(url) if self.pamiec else None
+        if z_pamieci is not None:
+            return z_pamieci
         for proba in range(5):
             time.sleep(PRZERWA)
             self.zapytan += 1
@@ -94,7 +99,10 @@ class ML:
                 r = _OTWIERACZ.open(urllib.request.Request(url, headers=self.h), timeout=120)
                 surowe = r.read() or b"null"
                 try:
-                    return json.loads(surowe)
+                    d = json.loads(surowe)
+                    if self.pamiec:
+                        self.pamiec.zapisz(url, d)
+                    return d
                 except ValueError:
                     sys.exit(f"API zwróciło odpowiedź, która nie jest JSON-em ({sciezka}).")
             except (socket.timeout, TimeoutError, http.client.IncompleteRead, ConnectionError):
@@ -266,33 +274,42 @@ def dni_krokow(kroki):
 
 def main():
     ap = argparse.ArgumentParser(description="Audyt MailerLite (tylko odczyt)")
-    ap.add_argument("--dni", type=int, default=90)
+    ap.add_argument("--dni", type=int, default=30, help="okres audytu kampanii w dniach (domyślnie 30; pełne 90 na prośbę)")
+    ap.add_argument("--postep", default=None, help="plik postępu (domyślnie obok raportu: <raport>.postep.txt)")
+    ap.add_argument("--plik-klucza", default="~/.config/audyt-mailingu/mailerlite.key", help="plik z tokenem, gdy nie ma zmiennej MAILERLITE_API_KEY")
+    ap.add_argument("--bez-pamieci", action="store_true", help="nie używaj pamięci odpowiedzi API (pobierz wszystko od nowa)")
+    ap.add_argument("--test-polaczenia", action="store_true", help="tylko sprawdź, czy token działa (jedno zapytanie), i zakończ")
     ap.add_argument("--raport", default="audyt-mailerlite.md")
     ap.add_argument("--json", default="")
     ap.add_argument("--pokaz", action="store_true", help="tryb pokazowy: bez tokena i bez internetu, na zmyślonych danych sklepu z herbatą")
     a = ap.parse_args()
     if a.dni < 1:
         sys.exit("--dni musi być co najmniej 1.")
+    postep = Postep(a.postep or (os.path.splitext(a.raport)[0] + ".postep.txt"))
     if a.pokaz:
         from pokaz_ml import PokazML
         ml = PokazML()
     else:
-        klucz = os.environ.get("MAILERLITE_API_KEY")
+        klucz = klucz_z_env_albo_pliku("MAILERLITE_API_KEY", a.plik_klucza)
         if not klucz:
-            sys.exit("Brak zmiennej MAILERLITE_API_KEY. Token: MailerLite → Integracje → MailerLite API → Wygeneruj nowy token. "
+            sys.exit("Brak tokena: nie ma zmiennej MAILERLITE_API_KEY ani pliku " + a.plik_klucza + ". Token: MailerLite → Integracje → MailerLite API → Wygeneruj nowy token. "
                      "Chcesz najpierw zobaczyć przykładowy raport bez tokena? Uruchom z --pokaz.")
-        ml = ML(klucz)
+        ml = ML(klucz, Pamiec("mailerlite", klucz, wlaczona=not a.bez_pamieci))
+        if a.test_polaczenia:
+            d = ml.get("/groups", {"limit": 1})
+            print("Połączenie działa — token ma dostęp do konta (odczyt grup)." if d is not None else "API odpowiedziało, ale bez danych.")
+            return
     dzis = dt.date.today()
     od = (dzis - dt.timedelta(days=a.dni)).isoformat()
     D = {"data_audytu": dzis.isoformat(), "okno_dni": a.dni, "od": od, "pokaz": a.pokaz}
 
-    print("1/5 grupy…", file=sys.stderr)
+    postep("1/5 grupy")
     D["grupy"] = sorted(({"nazwa": g.get("name"), "aktywni": int(liczba(g.get("active_count"))),
                           "wypisani": int(liczba(g.get("unsubscribed_count"))), "odbicia": int(liczba(g.get("bounced_count"))),
                           "spam": int(liczba(g.get("junk_count"))), "niepotwierdzeni": int(liczba(g.get("unconfirmed_count")))}
                          for g in ml.wszystkie("/groups")), key=lambda x: -x["aktywni"])
 
-    print("   formularze…", file=sys.stderr)
+    postep("1/5 formularze")
     D["formularze"] = []
     for typ in ("popup", "embedded", "promotion"):
         for x in ml.wszystkie(f"/forms/{typ}"):
@@ -308,7 +325,7 @@ def main():
             D["formularze"].append({"nazwa": czysc(x.get("name")), "typ": typ, "aktywny": bool(x.get("active")),
                                     "wyswietlenia": odw, "zapisy": zap, "konwersja_proc": konw, "uwagi": uwagi})
 
-    print("2/5 ustawienia sprzedaży i sklepy…", file=sys.stderr)
+    postep("2/5 ustawienia sprzedaży i sklepy")
     ust = (ml.get("/ecommerce/settings") or {}).get("data") or {}
     D["ustawienia"] = {"sledzenie_kampanie": ust.get("ecommerce_tracking_in_campaigns"),
                        "sledzenie_automaty": ust.get("ecommerce_tracking_in_automations"),
@@ -320,7 +337,7 @@ def main():
                             "wewnetrzny": bool(s.get("internal")),  # sklep MailerLite zakładany automatycznie
                             "waluta": s.get("currency")})
 
-    print("3/5 automatyzacje…", file=sys.stderr)
+    postep("3/5 automatyzacje")
     D["automaty"] = []
     for x in ml.wszystkie("/automations"):
         st = x.get("stats") or {}
@@ -371,7 +388,7 @@ def main():
                               "klikniecia_proc": stawka(st, "click_rate"), "wypisy_proc": stawka(st, "unsubscribe_rate"),
                               "uwagi": uwagi, "maile": maile})
 
-    print(f"4/5 kampanie z {a.dni} dni…", file=sys.stderr)
+    postep(f"4/5 kampanie z {a.dni} dni")
     D["kampanie"] = []
     D["kampanie_bez_daty"] = 0
     for c in ml.wszystkie("/campaigns", {"filter[status]": "sent"}):
@@ -399,7 +416,7 @@ def main():
         poz.sort(key=lambda m: (m["dzien"] is None, m["dzien"] or 0))
         D["seria_powitalna"].append({"automat": x["nazwa"], "maile": poz, "wnioski": wniosek_serii(poz)})
 
-    print("5/5 lista kontrolna…", file=sys.stderr)
+    postep("5/5 lista kontrolna i raport")
     D["lista_kontrolna"] = []
     for k in LISTA:
         tr = [x for x in D["automaty"] if x["kategoria"] == k]
@@ -421,7 +438,7 @@ def main():
     if a.json:
         with open(a.json, "w", encoding="utf-8") as plik:
             json.dump(D, plik, ensure_ascii=False, indent=1)
-    print(f"Gotowe: {a.raport} ({ml.zapytan} zapytań do API)", file=sys.stderr)
+    postep(f"Gotowe: {a.raport} ({ml.zapytan} zapytań do API)")
 
 
 def tn(x):

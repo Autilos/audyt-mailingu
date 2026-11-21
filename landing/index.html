@@ -368,7 +368,7 @@ footer .tm{font-size:.78rem;color:#ad9c80}
         <p>Potrzebujesz trzech rzeczy:</p>
         <div class="tabela-scroll"><table>
           <tr><th>Co</th><th>Skąd</th></tr>
-          <tr><td>Claude Code</td><td>Instrukcja instalacji: <a href="https://docs.claude.com/en/docs/claude-code/setup">docs.claude.com</a>. Działa w terminalu na Mac, Linux i Windows.</td></tr>
+          <tr><td>Claude Code</td><td>Instrukcja instalacji: <a href="https://docs.claude.com/en/docs/claude-code/setup">docs.claude.com</a>. Działa w terminalu na Mac, Linux i Windows. Przy pierwszym uruchomieniu wpisz <code>claude</code>, a potem <code>/login</code> i zaloguj się kontem Claude.</td></tr>
           <tr><td>Python 3.8 lub nowszy</td><td>Sprawdzisz komendą <code>python3 --version</code>. Bez dodatkowych pakietów.</td></tr>
           <tr><td>Klucz API GetResponse <em>albo</em> token MailerLite</td><td>Patrz krok 2.</td></tr>
         </table></div>
@@ -391,14 +391,11 @@ footer .tm{font-size:.78rem;color:#ad9c80}
     <div class="etap">
       <div class="duzy">3</div>
       <div>
-        <h3>Ustaw klucz w terminalu i uruchom Claude Code</h3>
-        <p>Komenda poprosi o klucz. Wklej go i naciśnij Enter: nie zobaczysz go na ekranie i nie zostanie w historii terminala.</p>
+        <h3>Zapisz klucz w terminalu — Claude Code może zostać otwarty</h3>
+        <p>W osobnym oknie albo karcie terminala wklej komendę, potem klucz, i naciśnij Enter. Klucza nie zobaczysz na ekranie i nie zostanie w historii terminala. Po zapisie pojawi się „Klucz zapisany (N znaków)”.</p>
         <p class="szary">GetResponse:</p>
-        <div class="kod"><pre>read -rs GETRESPONSE_API_KEY &amp;&amp; export GETRESPONSE_API_KEY
-claude</pre><button type="button">Kopiuj</button></div>
-        <p class="szary">MailerLite:</p>
-        <div class="kod"><pre>read -rs MAILERLITE_API_KEY &amp;&amp; export MAILERLITE_API_KEY
-claude</pre><button type="button">Kopiuj</button></div>
+        <div class="kod"><pre>mkdir -p ~/.config/audyt-mailingu &amp;&amp; (umask 077; read -rs K &amp;&amp; printf %s "$K" &gt; ~/.config/audyt-mailingu/getresponse.key &amp;&amp; echo "Klucz zapisany (${#K} znaków)"; unset K)</pre><button type="button">Kopiuj</button></div>
+        <p class="szary">MailerLite: to samo, tylko plik <code>mailerlite.key</code>. Po audycie usuń plik: <code>rm ~/.config/audyt-mailingu/getresponse.key</code>.</p>
       </div>
     </div>
 
@@ -418,7 +415,7 @@ claude</pre><button type="button">Kopiuj</button></div>
       <div>
         <h3>Poproś o audyt</h3>
         <div class="kod"><pre>zrób audyt mailingu</pre><button type="button">Kopiuj</button></div>
-        <p>Claude poprowadzi Cię krok po kroku: zapyta, którego systemu używasz, pokaże, skąd wziąć klucz i jak go ustawić bez wklejania do czatu (Mac, Linux i Windows), sprawdzi połączenie jednym zapytaniem i uruchomi audyt. Raport zapisze się w bieżącym katalogu jako <code>audyt-getresponse.md</code> albo <code>audyt-mailerlite.md</code>; na prośbę zrobi z niego PDF.</p>
+        <p>Claude poprowadzi Cię krok po kroku: zapyta, którego systemu używasz, pokaże, skąd wziąć klucz i jak go zapisać bez wklejania do czatu i bez zamykania Claude Code (Mac, Linux i Windows), sprawdzi połączenie jednym zapytaniem i uruchomi audyt w tle za ostatnie 30 dni (90 dni na prośbę). Przy dużym koncie co chwilę powie, na którym etapie jest; jeśli przebieg zostanie przerwany, kolejny nie zacznie od zera. Raport zapisze się w bieżącym katalogu jako <code>audyt-getresponse.md</code> albo <code>audyt-mailerlite.md</code>; na prośbę zrobi z niego PDF.</p>
       </div>
     </div>
 
@@ -426,7 +423,7 @@ claude</pre><button type="button">Kopiuj</button></div>
       <div class="duzy">6</div>
       <div>
         <h3>Po audycie usuń klucz</h3>
-        <p>GetResponse: <b>Menu → Integracje i API → API</b> → usuń klucz. MailerLite: <b>Integracje → MailerLite API</b> → usuń token. Zmienna w terminalu znika, gdy zamkniesz okno terminala.</p>
+        <p>GetResponse: <b>Menu → Integracje i API → API</b> → usuń klucz. MailerLite: <b>Integracje → MailerLite API</b> → usuń token. Usuń też plik z kluczem: <code>rm ~/.config/audyt-mailingu/getresponse.key</code> (albo <code>mailerlite.key</code>).</p>
       </div>
     </div>
 
