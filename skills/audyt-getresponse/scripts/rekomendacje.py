@@ -13,6 +13,10 @@ Zasady (źródła: dobre praktyki e-mail marketingu w e-commerce, benchmarki dos
 - wyniki ocenia się po kliknięciach i sprzedaży, nie po otwarciach.
 """
 
+# Porzucony koszyk i maile po zakupie bywają wysyłane przez sam sklep albo inny serwis — wtedy budowa w systemie
+# mailowym dubluje maile. Rekomendacja zawsze najpierw o to pyta.
+INNY_SYSTEM = ('Najpierw zapytaj, czy sklep nie wysyła już takich maili innym systemem (maile transakcyjne sklepu, wtyczka, osobny serwis wysyłkowy) — jeśli tak, nie buduj tego w systemie mailowym, żeby klient nie dostawał dwóch maili; sprawdź tylko, czy tamte maile wychodzą. ')
+
 # (kolejność, tytuł, treść). Kolejność: mniejsza = pilniejsza.
 REKOMENDACJE = {
     "sklep_bez_zamowien": (10, "Napraw przesyłanie zamówień ze sklepu",
@@ -35,11 +39,11 @@ REKOMENDACJE = {
         "Przykładowy układ: dzień 0 — powitanie, obiecany kod (jeśli formularz go obiecuje), jedno zdanie o marce i zapowiedź następnego maila; "
         "dzień 2 — historia marki albo dlaczego ten sklep; dzień 4 — opinie klientów i bestsellery; dzień 6 — poradnik (jak wybrać) z jednym polecanym produktem; "
         "dzień 8 — przypomnienie o wygasającym kodzie tylko dla tych, którzy nie kupili. Wyjście z serii po zakupie."),
-    "koszyk_brak": (60, "Uruchom porzucony koszyk",
-        "Trzy maile: po 1–4 godzinach przypomnienie ze zdjęciem produktu, bez rabatu; po 24 godzinach opinie i odpowiedź na typowe wątpliwości (dostawa, zwroty); "
+    "koszyk_brak": (60, "Uruchom porzucony koszyk (jeśli nie wysyła go sklep)",
+        INNY_SYSTEM + "Jeśli nie wysyła — trzy maile: po 1–4 godzinach przypomnienie ze zdjęciem produktu, bez rabatu; po 24 godzinach opinie i odpowiedź na typowe wątpliwości (dostawa, zwroty); "
         "po 48–72 godzinach ewentualnie jednorazowy kod. Wyjście po zakupie, automat może się powtarzać przy kolejnym porzuceniu."),
-    "po_zakupie_brak": (70, "Dodaj maile po zakupie",
-        "Kilka dni po dostawie: jak używać produktu i czego się spodziewać; około 14 dni po dostawie: prośba o opinię; potem propozycja kolejnego produktu dobranego do pierwszego zakupu."),
+    "po_zakupie_brak": (70, "Dodaj maile po zakupie (jeśli nie wysyła ich sklep)",
+        INNY_SYSTEM + "Jeśli nie wysyła — kilka dni po dostawie: jak używać produktu i czego się spodziewać; około 14 dni po dostawie: prośba o opinię; potem propozycja kolejnego produktu dobranego do pierwszego zakupu."),
     "drugi_zakup_brak": (80, "Dodaj automat drugiego zakupu",
         "Policz w sklepie medianę dni między pierwszym a drugim zakupem i ustaw mail nieco przed nią. Sprawdź, czy klienci wracają po to samo, czy po inny produkt — "
         "jeśli po inny, proponuj nowość dopasowaną do pierwszego zakupu, a nie ponowienie tego samego."),

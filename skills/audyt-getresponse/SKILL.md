@@ -86,6 +86,8 @@ Jak czytać wyniki:
 - **Seria powitalna**: skrypt bierze klasyczne autorespondery (grupuje je po liście, dzień z cyklu) oraz maile z automatów o nazwie lub temacie powitalnym, pobiera treść każdego maila (najwyżej 20) i klasyfikuje go jako **sprzedażowy / wartościowy / mieszany** z krótkim powodem. To ocena po słowach i elementach maila (kod, procent, ceny, przyciski), która może się pomylić — reguły są jawne w `scripts/seria_powitalna.py`. Tak ją przedstawiaj, zwykłymi słowami, bez słowa „heurystyka”. Maile z samych obrazków wyjdą jako „nieokreślony”. Dni i kolejności maili z nowych automatów API nie podaje.
 - **Rekomendacje** (`scripts/rekomendacje.py`): tylko do wykrytych problemów, w kolejności: dane (sklep, kontakty) → dostarczalność (skargi, wypisy, częstotliwość) → automaty od najbardziej dochodowych. Gdy seria powitalna jest dobra, raport mówi, że jest dobra — nie dopisuj zmian na siłę. Nie obiecuj wzrostów w procentach i nie podawaj czasu wdrożenia.
 
+- **Porzucony koszyk i maile po zakupie:** zanim polecisz ich budowę, zapytaj użytkownika, czy sklep nie wysyła ich już sam (maile transakcyjne sklepu, wtyczka, osobny serwis). Jeśli tak — nie rekomenduj budowy w systemie mailowym (dublowanie), tylko sprawdzenie, czy tamte maile wychodzą.
+
 Zasady:
 - Progi wypisów i kliknięć to orientacyjne granice z praktyki, nie normy — mów o nich jako o sygnale do sprawdzenia.
 - Oceniaj maile po kliknięciach i sprzedaży, nie po otwarciach (otwarcia zawyżają programy pocztowe, nawet po odsianiu botów).

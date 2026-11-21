@@ -28,6 +28,8 @@ Każde hasło znaczy w kodzie, raportach i rozmowie dokładnie to, co tu napisan
 
 **Lista kontrolna automatów** — pięć–sześć automatów, które powinien mieć sklep: powitanie, porzucony koszyk, po zakupie, porzucone przeglądanie (tylko GetResponse), drugi zakup, reaktywacja. W GetResponse rozpoznawane po nazwie (API nie pokazuje wyzwalaczy), więc „nie znaleziono” znaczy „sprawdź w panelu”, a nie „na pewno brak”.
 
+**Automat wysyłany przez sklep** — porzucony koszyk i maile po zakupie może wysyłać sam sklep albo osobny serwis (maile transakcyjne, wtyczka). Wtedy brak takiego automatu w systemie mailowym nie jest problemem, a jego budowa dublowałaby maile — rekomendacja najpierw o to pyta.
+
 **Seria powitalna** — maile wysyłane nowej osobie po zapisie: w GetResponse klasyczne autorespondery (grupowane po liście, z dniem cyklu) oraz maile z automatów o nazwie lub temacie powitalnym; w MailerLite automat rozpoznany jako powitanie, z dniem liczonym po drzewie kroków. Oceniane są maile, które realnie wychodzą; mail włączony, ale nigdy niewysłany, nie poprawia oceny serii.
 
 **Mail sprzedażowy / wartościowy / mieszany** — ocena po słowach i elementach maila, z tematu i treści (`seria_powitalna.py`); może się pomylić: sprzedażowy ma sygnały oferty (kod, procent, kwota, „kup”, „zamów”, link do produktu lub koszyka), wartościowy ma treść bez oferty (poradnik, historia marki, opinie, dłuższy tekst), mieszany ma jedno i drugie. Stopka jest odcinana; mail z samych obrazków wychodzi jako „nieokreślony”. W raporcie zawsze piszemy, że to ocena po słowach i elementach maila, która może się pomylić — bez słowa „heurystyka”.

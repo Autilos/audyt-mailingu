@@ -740,7 +740,7 @@ def raport(D):
     for x in D["lista_kontrolna"]:
         ik = "✅" if x["stan"] == "działa" else ("⚠️" if x["stan"].startswith("jest") else "❓")
         L.append(f"| {x['automat']} | {ik} {x['stan']} | {'; '.join(t for t in x['trafienia'] if t) or '—'} |")
-    L += ["", "API GetResponse nie pokazuje warunków ani wyzwalaczy automatów — automat nazwany nietypowo może istnieć mimo „❓”.", ""]
+    L += ["", "API GetResponse nie pokazuje warunków ani wyzwalaczy automatów — automat nazwany nietypowo może istnieć mimo „❓”.", "Porzucony koszyk i maile po zakupie może wysyłać sam sklep albo inny serwis (maile transakcyjne sklepu, wtyczka). Jeśli tak jest, brak takiego automatu tutaj nie jest problemem — nie warto go dublować.", ""]
 
     L += ["## Automatyzacje", "", "| Automat | Włączony | Zakończyli | W trakcie | Uwagi |", "|---|---|---|---|---|"]
     for x in sorted(D["automaty"], key=lambda x: (not x["aktywny"], -(x["zakonczyli"] + x["w_trakcie"]))):

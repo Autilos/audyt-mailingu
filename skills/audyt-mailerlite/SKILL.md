@@ -79,6 +79,8 @@ Najpierw sekcja „Najważniejsze”, szczegóły na prośbę. Dla każdego prob
 - **Seria powitalna**: dla automatów rozpoznanych jako powitanie skrypt liczy dzień każdego maila z kroków opóźnienia (po rozgałęzieniu — nieznany) i klasyfikuje mail jako **sprzedażowy / wartościowy / mieszany** z krótkim powodem. To ocena po słowach i elementach maila (kod, procent, ceny, przyciski), która może się pomylić — reguły są jawne w `scripts/seria_powitalna.py`. Użytkownikowi mów o niej zwykłymi słowami, bez słowa „heurystyka”. Jeśli API nie poda treści maila, ocena jest tylko z tematu — raport to zaznacza.
 - **Rekomendacje** (`scripts/rekomendacje.py`, ten sam plik co w audycie GetResponse): tylko do wykrytych problemów, w kolejności: dane → dostarczalność → automaty. Gdy seria jest dobra, raport mówi, że jest dobra. Bez obietnic wzrostów w procentach i bez czasu wdrożenia.
 
+- **Porzucony koszyk i maile po zakupie:** zanim polecisz ich budowę, zapytaj użytkownika, czy sklep nie wysyła ich już sam (maile transakcyjne sklepu, wtyczka, osobny serwis). Jeśli tak — nie rekomenduj budowy w systemie mailowym (dublowanie), tylko sprawdzenie, czy tamte maile wychodzą.
+
 Zasady:
 - Oceniaj maile po kliknięciach i sprzedaży — otwarcia w MailerLite obejmują automatyczne otwarcia programów pocztowych.
 - Progi wypisów i kliknięć to orientacyjne granice z praktyki, nie normy.

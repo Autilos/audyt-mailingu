@@ -549,7 +549,7 @@ def raport(D):
         ik = "✅" if x["stan"] == "działa" else ("⚠️" if x["stan"].startswith("jest") or "wymaga" in x["stan"] else "❌")
         L.append(f"| {x['automat']} | {ik} {x['stan']} | {'; '.join(x['trafienia']) or '—'} |")
     L += ["", "Rozpoznanie po wyzwalaczu automatu (koszyk, zakup, częstotliwość zakupów); przy wyzwalaczach ogólnych (formularz, grupa) — po nazwie. "
-          "Automatu „porzucone przeglądanie” MailerLite nie oferuje, więc go nie sprawdzamy.", ""]
+          "Automatu „porzucone przeglądanie” MailerLite nie oferuje, więc go nie sprawdzamy.", "Porzucony koszyk i maile po zakupie może wysyłać sam sklep albo inny serwis (maile transakcyjne sklepu, wtyczka). Jeśli tak jest, brak takiego automatu tutaj nie jest problemem — nie warto go dublować.", ""]
 
     L += ["## Automatyzacje", "", "| Automat | Wyzwalacz | Włączony | Zakończyli | W kolejce | Wysłane | Kliknięcia | Uwagi |", "|---|---|---|---|---|---|---|---|"]
     for x in sorted(D["automaty"], key=lambda x: (not x["wlaczony"], -x["wyslane"])):

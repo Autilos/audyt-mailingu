@@ -58,5 +58,22 @@ class Kolejnosc(unittest.TestCase):
         self.assertTrue(filecmp.cmp(os.path.join(GR, "rekomendacje.py"), os.path.join(ML, "rekomendacje.py"), shallow=False))
 
 
+
+class InnySystem(unittest.TestCase):
+    def test_koszyk_i_po_zakupie_pytaja_o_sklep(self):
+        for k in ("koszyk_brak", "po_zakupie_brak"):
+            _, tyt, tresc = REKOMENDACJE[k]
+            self.assertIn("jeśli nie wysyła", tyt.lower())
+            self.assertIn("Najpierw zapytaj, czy sklep nie wysyła już takich maili innym systemem", tresc)
+            self.assertIn("nie buduj tego", tresc)
+
+    def test_uwaga_w_liscie_kontrolnej_raportu(self):
+        import json, subprocess, tempfile
+        skrypt = os.path.join(GR, "audyt_getresponse.py")
+        with tempfile.TemporaryDirectory() as d:
+            md = os.path.join(d, "r.md")
+            subprocess.run([sys.executable, skrypt, "--pokaz", "--raport", md], check=True, capture_output=True, cwd=d)
+            self.assertIn("może wysyłać sam sklep", open(md, encoding="utf-8").read())
+
 if __name__ == "__main__":
     unittest.main()
