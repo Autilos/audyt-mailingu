@@ -1,5 +1,15 @@
 # Zmiany
 
+## 0.3.3 — 2026-11-21
+
+- Duże konta: skill uruchamia audyt od razu w tle i co chwilę czyta plik postępu (`<raport>.postep.txt`); domyślny okres 30 dni (90 na prośbę).
+- Wznawianie: pamięć odpowiedzi API w katalogu tymczasowym (12 godzin, prawa tylko dla właściciela, bez danych osobowych) — przerwany audyt uruchomiony ponownie nie zaczyna od zera; `--bez-pamieci` wyłącza.
+- Postęp: etapy i liczniki (automaty, maile x/y, newslettery, strony zamówień).
+- Klucz bez zamykania Claude Code: zapis do `~/.config/audyt-mailingu/<system>.key` w drugim oknie terminala, z komunikatem „Klucz zapisany (N znaków)”; Claude nie pyta drugi raz o system. README: krok `/login` w świeżym Claude Code.
+- Powitanie: ✅ tylko gdy działa na największej liście — jeśli tam jest wyłączone, raport mówi to wprost.
+- Formularze bez uprawnień klucza: zwykły komunikat, że ta część jest pominięta i gdzie zobaczyć wyniki.
+- MailerLite: dodane `--test-polaczenia` (SKILL.md się do niego odwoływał, a skrypt go nie miał).
+
 ## 0.3.2 — 2026-11-21
 
 - Porzucony koszyk i maile po zakupie: zanim raport poleci ich budowę, każe zapytać, czy sklep nie wysyła ich już innym systemem (maile transakcyjne sklepu, wtyczka, osobny serwis) — bez dublowania maili. Uwaga pod listą kontrolną w raporcie GetResponse i MailerLite, zasada w SKILL.md i `docs/CONCEPTS.md`.

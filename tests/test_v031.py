@@ -110,7 +110,7 @@ class SkillPomocy(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(KORZEN, ".github", "ISSUE_TEMPLATE", "blad.md")))
 
     def test_wersja_pluginu(self):
-        self.assertEqual(json.load(open(os.path.join(KORZEN, ".claude-plugin", "plugin.json")))["version"], "0.3.2")
+        self.assertEqual(json.load(open(os.path.join(KORZEN, ".claude-plugin", "plugin.json")))["version"], "0.3.3")
 
 
 if __name__ == "__main__":

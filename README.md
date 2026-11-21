@@ -54,32 +54,45 @@ Zapytaj w Claude Code „jak to naprawić?”, „kto mi to wdroży?” albo „
 
 ## Instalacja w Claude Code
 
+0. Zainstaluj [Claude Code](https://claude.com/claude-code) i przy pierwszym uruchomieniu zaloguj się kontem Claude: w terminalu wpisz `claude`, a potem `/login`.
+1. W Claude Code wpisz:
+
 ```
 /plugin marketplace add Autilos/audyt-mailingu
 /plugin install audyt-mailingu@audyt-mailingu
 ```
 
-Potem napisz: **„zainstaluj audyt”** albo **„zrób audyt mailingu”** — skill poprowadzi krok po kroku: który system, skąd wziąć klucz, jak go ustawić bez wklejania do czatu (Mac/Linux i Windows), test połączenia, pierwszy przebieg i przypomnienie o usunięciu klucza.
+2. Napisz: **„zrób audyt mailingu”** — skill poprowadzi krok po kroku: który system, skąd wziąć klucz, jak go zapisać bez wklejania do czatu i **bez zamykania Claude Code**, test połączenia, przebieg i przypomnienie o usunięciu klucza.
+
+**Klucz bez zamykania Claude Code:** otwórz drugie okno albo kartę terminala i wklej (Mac / Linux):
+
+```bash
+mkdir -p ~/.config/audyt-mailingu && (umask 077; read -rs K && printf %s "$K" > ~/.config/audyt-mailingu/getresponse.key && echo "Klucz zapisany (${#K} znaków)"; unset K)
+```
+
+Wklej klucz (nic się nie wyświetli) i naciśnij Enter — zobaczysz „Klucz zapisany (N znaków)”. Wróć do Claude Code i napisz „gotowe”. Dla MailerLite plik nazywa się `mailerlite.key`. Po audycie usuń plik: `rm ~/.config/audyt-mailingu/getresponse.key`.
+
+**Duże konto?** Audyt domyślnie obejmuje 30 dni (90 na prośbę), działa w tle i pokazuje postęp (plik `audyt-getresponse.postep.txt`). Jeśli zostanie przerwany, uruchomiony ponownie nie zaczyna od zera — pamięta pobrane odpowiedzi API przez 12 godzin (w katalogu tymczasowym, bez danych osobowych).
 
 ## Bez Claude Code
 
 ```bash
 # GetResponse
-read -rs GETRESPONSE_API_KEY && export GETRESPONSE_API_KEY   # wklej klucz, Enter (GetResponse → Menu → Integracje i API → API)
-python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --dni 90 --raport audyt-getresponse.md
+read -rs GETRESPONSE_API_KEY && export GETRESPONSE_API_KEY && echo "Klucz zapisany (${#GETRESPONSE_API_KEY} znaków)"   # GetResponse → Menu → Integracje i API → API
+python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --raport audyt-getresponse.md
 
 # MailerLite
-read -rs MAILERLITE_API_KEY && export MAILERLITE_API_KEY     # wklej token, Enter (MailerLite → Integracje → MailerLite API)
-python3 skills/audyt-mailerlite/scripts/audyt_mailerlite.py --dni 90 --raport audyt-mailerlite.md
+read -rs MAILERLITE_API_KEY && export MAILERLITE_API_KEY && echo "Token zapisany (${#MAILERLITE_API_KEY} znaków)"   # MailerLite → Integracje → MailerLite API
+python3 skills/audyt-mailerlite/scripts/audyt_mailerlite.py --raport audyt-mailerlite.md
 ```
 
-Wymaga Pythona 3.8+, bez dodatkowych pakietów. Test połączenia (jedno zapytanie): `--test-polaczenia`. Porównanie z danymi sklepu (GetResponse): `--przychod-sklepu 12345 --zamowienia-sklepu 67`.
+Wymaga Pythona 3.8+, bez dodatkowych pakietów. Domyślnie 30 dni, `--dni 90` dla dłuższego okresu. Postęp: plik `<raport>.postep.txt`. Test połączenia (jedno zapytanie): `--test-polaczenia`. Porównanie z danymi sklepu (GetResponse): `--przychod-sklepu 12345 --zamowienia-sklepu 67`.
 
 Windows (PowerShell 7):
 
 ```powershell
 $env:GETRESPONSE_API_KEY = Read-Host -MaskInput "Klucz API"
-python skills/audyt-getresponse/scripts/audyt_getresponse.py --dni 90 --raport audyt-getresponse.md
+python skills/audyt-getresponse/scripts/audyt_getresponse.py --raport audyt-getresponse.md
 ```
 
 Testy: `python3 -m unittest discover -s tests -v`.
