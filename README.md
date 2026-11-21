@@ -8,7 +8,7 @@ Obsługuje **GetResponse** i **MailerLite**.
 
 - Czy masz automaty, które powinien mieć każdy sklep: powitanie, porzucony koszyk, po zakupie, drugi zakup, reaktywacja nieaktywnych klientów.
 - Czy automaty naprawdę działają — czy ktoś przez nie przechodzi (częsty problem: automat „włączony”, a od miesięcy nikt do niego nie wszedł).
-- Wyniki każdego maila: otwarcia i kliknięcia bez botów, wypisy, skargi na spam, odbicia.
+- Wyniki każdego maila: kliknięcia, otwarcia, wypisy, skargi na spam, odbicia. W GetResponse otwarcia i kliknięcia są liczone bez botów (pola „ludzkie” z API). W MailerLite otwarcia są surowe (z automatycznymi otwarciami, np. Apple Mail), dlatego tam liczą się kliknięcia.
 - Jak często wysyłasz newslettery i czy nie męczysz bazy.
 - Czy sklep w ogóle przesyła zamówienia do systemu mailingowego i ilu kupujących nie trafia do bazy.
 - Czy maile mają włączone śledzenie e-commerce (przypisywanie sprzedaży do maila).

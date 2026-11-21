@@ -1,11 +1,19 @@
 ---
 name: audyt-getresponse
-description: Audyt e-mail marketingu sklepu internetowego w GetResponse — tylko odczyt. Sprawdza, czy działają podstawowe automaty (powitanie, porzucony koszyk, po zakupie, drugi zakup, reaktywacja), czy ktoś przez nie przechodzi, wyniki każdego maila (otwarcia i kliknięcia bez botów, wypisy, skargi), częstotliwość newsletterów, czy sklep przesyła zamówienia i czy maile mają włączone liczenie przychodu. Kończy raportem po polsku z listą najważniejszych problemów. Use when user says „audyt getresponse", „sprawdź mój getresponse", „czy moje automaty działają", „audyt mailingu", „audyt e-mail marketingu", „getresponse audit".
+description: Audyt e-mail marketingu sklepu internetowego w GetResponse — tylko odczyt. Sprawdza, czy działają podstawowe automaty (powitanie, porzucony koszyk, po zakupie, drugi zakup, reaktywacja), czy ktoś przez nie przechodzi, wyniki każdego maila (otwarcia i kliknięcia bez botów, wypisy, skargi), częstotliwość newsletterów, czy sklep przesyła zamówienia i czy maile mają włączone liczenie przychodu. Kończy raportem po polsku z listą najważniejszych problemów. Use when user says „audyt getresponse", „sprawdź mój getresponse", „czy moje automaty działają", „audyt mailingu", „audyt e-mail marketingu", „getresponse audit". Gdy użytkownik nie podał systemu, najpierw zapyta: GetResponse czy MailerLite.
 ---
 
 # Audyt GetResponse (tylko odczyt)
 
 Skill czyta konto GetResponse przez oficjalne API v3 i pisze raport. **Niczego nie zmienia** — skrypt wywołuje wyłącznie zapytania GET. Nie pobiera adresów e-mail ani danych kontaktów — tylko liczby zbiorcze oraz nazwy automatów, list i tematy maili z konta.
+
+## Krok 0 — który system mailowy
+
+Jeśli użytkownik nie nazwał systemu wprost (napisał np. „zrób audyt mailingu”, „sprawdź moje maile”), **zapytaj, zanim cokolwiek uruchomisz**: „Z którego systemu wysyłasz maile: GetResponse czy MailerLite?”. Nie zgaduj po nazwie skilla.
+- GetResponse → ten skill.
+- MailerLite → przełącz się na skill `audyt-mailerlite`.
+- Inny system (np. Mailchimp, Klaviyo, Brevo, SALESmanago) → powiedz wprost, że ten audyt obsługuje tylko GetResponse i MailerLite, i nie uruchamiaj skryptu.
+- MailerLite Classic (konta sprzed 22.03.2022) ma inne API i nie jest obsługiwany.
 
 ## Krok 1 — klucz API
 

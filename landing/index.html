@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audyt e-mail marketingu sklepu: GetResponse i MailerLite w Claude Code</title>
+<meta name="description" content="Darmowy skill do Claude Code, który sprawdza automaty, maile i połączenie ze sklepem w GetResponse i MailerLite. Tylko odczyt, raport po polsku.">
+<style>
+:root{
+  --tlo:#2e070b; --tlo2:#3a0c11; --karta:#4a1117; --karta2:#5a161d; --kod:#1e0306; --linia:#6e2028;
+  --zloto:#d7bb79; --zloto2:#e6cd8e; --tekst:#f3ead8; --szary:#c9b99c;
+  --czerwien:#c8102e; --czerwien2:#a50d26; --czerwien-tekst:#ff8a94; --stop:#ff8a94;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--tlo);color:var(--tekst);font-family:var(--sans);font-size:17px;line-height:1.6}
+a{color:var(--zloto)}
+a:hover{color:var(--zloto2)}
+.w{max-width:1040px;margin:0 auto;padding:0 22px}
+code,pre,.mono{font-family:var(--mono)}
+
+/* pasek górny */
+.pasek{position:sticky;top:0;z-index:10;background:#22050a;border-bottom:3px solid var(--czerwien);box-shadow:0 1px 0 var(--zloto)}
+.pasek .w{display:flex;align-items:center;justify-content:space-between;gap:16px;height:58px}
+.znak{font-family:var(--mono);font-weight:700;color:var(--tekst);text-decoration:none;letter-spacing:.02em}
+.znak b{color:var(--zloto)}
+.pasek nav{display:flex;gap:20px;font-size:.88rem}
+.pasek nav a{color:var(--szary);text-decoration:none}
+.pasek nav a:hover{color:var(--zloto)}
+
+/* typografia sekcji */
+.kicker{font-family:var(--mono);color:var(--zloto);font-size:.78rem;letter-spacing:.28em;text-transform:uppercase;display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.kicker::before{content:"";width:28px;height:3px;background:var(--czerwien)}
+h1,h2,h3{line-height:1.2;margin:0 0 14px}
+h1{font-size:clamp(2rem,5.2vw,3.3rem);letter-spacing:-.01em}
+h2{font-size:clamp(1.5rem,3.4vw,2.1rem)}
+h2::after{content:"";display:block;width:84px;height:3px;background:linear-gradient(90deg,var(--czerwien) 0 50%,var(--zloto) 50% 100%);margin-top:12px}
+h3{font-size:1.12rem}
+section{scroll-margin-top:60px;padding:68px 0;border-bottom:1px solid var(--linia)}
+.lead{font-size:1.15rem;color:var(--tekst);max-width:720px}
+.szary{color:var(--szary)}
+
+/* hero */
+.hero{padding:76px 0 60px;background:radial-gradient(1200px 400px at 80% -10%,#6a1420 0%,transparent 70%),linear-gradient(180deg,#36090e,var(--tlo))}
+.hero .pod{font-family:var(--mono);color:var(--zloto);letter-spacing:.24em;text-transform:uppercase;font-size:clamp(.8rem,1.8vw,.95rem);margin-bottom:22px}
+.przyciski{display:flex;gap:14px;flex-wrap:wrap;margin:28px 0 34px}
+.btn{display:inline-block;padding:13px 22px;border-radius:4px;font-weight:600;text-decoration:none;border:1px solid var(--zloto)}
+.btn.pelny{background:var(--zloto);color:#1c0003}
+.btn.pelny:hover{background:var(--zloto2);color:#1c0003}
+.btn.pusty{color:var(--tekst);background:var(--czerwien);border-color:var(--czerwien)}
+.btn.pusty:hover{background:var(--czerwien2);color:#fff}
+.status{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--linia);border:1px solid var(--linia);border-top:3px solid var(--czerwien)}
+.status div{background:var(--tlo2);padding:14px 16px}
+.status span{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.2em;color:var(--zloto);text-transform:uppercase}
+.status b{font-family:var(--mono);font-size:.9rem;font-weight:400}
+
+/* karty */
+.siatka{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+.siatka.dwa{grid-template-columns:repeat(2,1fr)}
+.karta{background:var(--karta);border:1px solid var(--linia);border-top:3px solid var(--czerwien);border-radius:6px;padding:20px}
+.karta p{margin:0;color:var(--szary);font-size:.95rem}
+.nr{font-family:var(--mono);color:var(--czerwien-tekst);font-size:.85rem;margin-bottom:8px}
+
+/* programy */
+.programy{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+.program{background:var(--karta);border:1px solid var(--linia);border-radius:6px;padding:22px;display:flex;flex-direction:column;gap:12px}
+.logo{display:flex;align-items:center;min-height:44px;font-weight:800;font-size:1.35rem;letter-spacing:-.01em;color:#fff}
+.logo img{display:block;height:30px;width:auto}
+.logo.ml img{height:36px}
+.program p{margin:0;color:var(--szary);font-size:.93rem}
+.etykieta{align-self:flex-start;font-family:var(--mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;border-radius:3px;background:var(--czerwien);color:#fff}
+
+/* kroki instalacji (układ: numerowane etapy jak w instrukcji krok po kroku) */
+.etap{display:grid;grid-template-columns:64px minmax(0,1fr);gap:18px;padding:26px 0;border-top:1px dashed var(--linia)}
+.etap:first-of-type{border-top:0}
+.etap .duzy{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:#fff;background:var(--czerwien);width:48px;height:48px;border-radius:50%;display:grid;place-items:center;line-height:1}
+.etap h3{margin-bottom:8px}
+.etap p,.etap li{color:var(--tekst)}
+.etap ol{margin:8px 0 0;padding-left:20px}
+.kod{position:relative;margin:12px 0}
+.kod pre{margin:0;background:var(--kod);border:1px solid var(--linia);border-left:3px solid var(--zloto);border-radius:4px;padding:14px 92px 14px 16px;overflow-x:auto;font-size:.88rem;color:#f5eddc;white-space:pre}
+.kod button{position:absolute;top:8px;right:8px;font-family:var(--mono);font-size:.72rem;background:var(--karta2);color:var(--zloto);border:1px solid var(--zloto);border-radius:3px;padding:5px 9px;cursor:pointer}
+.kod button.ok{background:var(--zloto);color:#1c0003}
+table{width:100%;border-collapse:collapse;font-size:.93rem;margin:12px 0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--linia);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--zloto);background:var(--tlo2)}
+.uwaga{min-width:0;overflow-wrap:anywhere;background:var(--tlo2);border-left:4px solid var(--zloto);padding:14px 18px;margin:16px 0;font-size:.95rem}
+.uwaga.stop{border-left-color:var(--czerwien);background:#3f0a10}
+.uwaga b{color:var(--zloto2)}
+
+/* raport */
+.raport{background:#f7f2e7;color:#24140f;border-radius:6px;padding:28px 30px;font-size:.93rem;box-shadow:0 14px 40px rgba(0,0,0,.35);margin-top:24px}
+.raport h4{font-size:1.25rem;margin:0 0 6px;color:#1c0003}
+.raport h5{font-size:1rem;margin:22px 0 8px;color:#4a0a12}
+.raport ol{padding-left:22px;margin:0}
+.raport li{margin-bottom:6px}
+.raport table th{background:#ece2cc;color:#4a0a12}
+.raport table td,.raport table th{border-bottom:1px solid #dccfb3}
+.raport .meta{color:#6b5d47;font-size:.85rem}
+.fikcja{font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--czerwien);margin-top:14px}
+.tabela-scroll{overflow-x:auto}
+
+/* infografika: 3 kroki */
+.kroki3{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr) 44px minmax(0,1fr);align-items:stretch;margin-top:28px}
+.krok3{background:var(--karta);border:1px solid var(--linia);border-radius:8px;padding:22px 20px;position:relative}
+.krok3 .ikona{width:56px;height:56px;border-radius:50%;background:var(--czerwien);display:grid;place-items:center;margin-bottom:14px}
+.krok3 .ikona svg{width:28px;height:28px}
+.krok3 .etap-nr{position:absolute;top:16px;right:18px;font-family:var(--mono);font-size:2.2rem;font-weight:700;color:var(--karta2);line-height:1}
+.krok3 h3{margin-bottom:6px}
+.krok3 p{margin:0;color:var(--szary);font-size:.93rem}
+.krok3 .tag{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:.72rem;color:var(--zloto);border:1px solid var(--zloto);border-radius:3px;padding:2px 7px}
+.strzalka{display:grid;place-items:center}
+.strzalka svg{width:30px;height:30px}
+
+/* infografika: mapa 5 automatów */
+.mapa{margin-top:28px;display:grid;gap:10px}
+.mapa-wiersz{display:grid;grid-template-columns:52px minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);gap:0;background:var(--karta);border:1px solid var(--linia);border-radius:8px;overflow:hidden}
+.mapa-wiersz>div{padding:14px 16px;border-left:1px solid var(--linia)}
+.mapa-wiersz>div:first-child{border-left:0}
+.mapa-nr{background:var(--czerwien);color:#fff;font-family:var(--mono);font-weight:700;font-size:1.2rem;display:grid;place-items:center}
+.mapa-naglowek{background:transparent;border:0}
+.mapa-naglowek>div{border-left:0;font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--zloto);padding-top:0;padding-bottom:4px}
+.mapa h3{margin:0 0 4px;font-size:1.05rem}
+.mapa small{color:var(--szary);font-size:.86rem;display:block}
+.mapa .tak{color:var(--tekst);font-size:.9rem}
+.mapa .tak b{color:var(--zloto)}
+.mapa .etk{display:none}
+.oba{margin-top:16px;display:flex;flex-wrap:wrap;gap:10px}
+.oba span{background:var(--tlo2);border:1px solid var(--linia);border-left:3px solid var(--czerwien);border-radius:4px;padding:8px 12px;font-size:.9rem}
+
+/* faq */
+details{background:var(--karta);border:1px solid var(--linia);border-radius:6px;margin:10px 0;padding:0 18px}
+summary{cursor:pointer;padding:15px 0;font-weight:600;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";float:right;color:var(--zloto);font-family:var(--mono)}
+details[open] summary::after{content:"–"}
+details p{margin:0 0 16px;color:var(--szary)}
+
+/* kontakt */
+form{display:grid;gap:12px;max-width:620px;margin-top:20px}
+label{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--zloto)}
+input,select,textarea{width:100%;background:var(--kod);color:var(--tekst);border:1px solid var(--linia);border-radius:4px;padding:11px 12px;font:inherit;font-size:16px}
+textarea{min-height:110px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--zloto);outline-offset:1px}
+
+footer{padding:40px 0 60px;color:var(--szary);font-size:.88rem}
+footer .w{display:grid;gap:12px}
+footer .tm{font-size:.78rem;color:#ad9c80}
+
+@media (max-width:820px){
+  .pasek nav{display:none}
+  .kroki3{grid-template-columns:minmax(0,1fr)}
+  .strzalka{padding:6px 0}
+  .strzalka svg{transform:rotate(90deg)}
+  .mapa-naglowek{display:none}
+  .mapa-wiersz{grid-template-columns:44px minmax(0,1fr)}
+  .mapa-wiersz>div:nth-child(n+3){grid-column:2;border-left:1px solid var(--linia);border-top:1px solid var(--linia)}
+  .mapa-nr{grid-row:span 3}
+  .mapa .etk{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--zloto);margin-bottom:2px}
+  .kicker::before{display:none}
+  .status{grid-template-columns:repeat(2,1fr)}
+  .siatka,.siatka.dwa,.programy{grid-template-columns:1fr}
+  .etap{grid-template-columns:minmax(0,1fr);gap:6px}
+  .etap .duzy{font-size:1.2rem;width:40px;height:40px}
+  section{padding:52px 0}
+  .raport{padding:20px 16px}
+  .raport table{font-size:.8rem}
+  .raport th,.raport td{padding:7px 6px}
+  .kod{display:flex;flex-direction:column-reverse;gap:6px}
+  .kod button{position:static;align-self:flex-end}
+  .kod pre{padding-right:16px;font-size:.8rem}
+}
+</style>
+</head>
+<body>
+
+<header class="pasek">
+  <div class="w">
+    <a class="znak" href="#">audyt<b>-</b>mailingu</a>
+    <nav>
+      <a href="#jak-dziala">Jak działa</a>
+      <a href="#co-wykrywa">Co wykrywa</a>
+      <a href="#instalacja">Instalacja</a>
+      <a href="#raport">Przykład raportu</a>
+      <a href="#bezpieczenstwo">Bezpieczeństwo</a>
+      <a href="#faq">Pytania</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="w">
+    <div class="kicker">Skill do Claude Code · darmowy · kod otwarty (MIT)</div>
+    <h1>Audyt e-mail marketingu sklepu</h1>
+    <div class="pod">GetResponse · MailerLite · tylko odczyt</div>
+    <p class="lead">Skill robi audyt e-mail marketingu sklepu: czyta Twoje konto przez oficjalne API i mówi wprost, co nie działa: automaty, przez które nikt nie przechodzi, maile bez linku do wypisu, sklep, który nie przesyła zamówień, i maile, które nie liczą sprzedaży. Wynik dostajesz jako raport po polsku, z najważniejszymi problemami na górze.</p>
+    <div class="przyciski">
+      <a class="btn pelny" href="#instalacja">Jak zainstalować</a>
+      <a class="btn pusty" href="https://github.com/Autilos/audyt-mailingu">Kod na GitHubie</a>
+    </div>
+    <div class="status">
+      <div><span>Dostęp do konta</span><b>tylko odczyt (GET)</b></div>
+      <div><span>Dane kontaktów</span><b>nie pobiera</b></div>
+      <div><span>Raport</span><b>plik .md na Twoim dysku</b></div>
+      <div><span>Licencja</span><b>MIT</b></div>
+    </div>
+  </div>
+</section>
+
+<section id="jak-dziala">
+  <div class="w">
+    <div class="kicker">Jak działa</div>
+    <h2>Audyt w trzech krokach</h2>
+    <div class="kroki3" role="list">
+      <div class="krok3" role="listitem">
+        <div class="etap-nr" aria-hidden="true">01</div>
+        <div class="ikona" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/></svg></div>
+        <h3>Klucz API zostaje u Ciebie</h3>
+        <p>Ustawiasz go w swoim terminalu jako zmienną środowiskową, zanim uruchomisz Claude Code: tylko tę dla systemu, którego używasz. Nie wklejasz go do czatu.</p>
+        <span class="tag">GETRESPONSE_API_KEY albo MAILERLITE_API_KEY</span>
+      </div>
+      <div class="strzalka" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#d7bb79" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+      <div class="krok3" role="listitem">
+        <div class="etap-nr" aria-hidden="true">02</div>
+        <div class="ikona" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></svg></div>
+        <h3>Claude Code czyta konto</h3>
+        <p>Uruchamia skrypt, który wysyła tylko zapytania GET do oficjalnego API. Inne adresy i przekierowania są odrzucane. Na koncie nic się nie zmienia.</p>
+        <span class="tag">tylko odczyt · bez danych kontaktów</span>
+      </div>
+      <div class="strzalka" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#d7bb79" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+      <div class="krok3" role="listitem">
+        <div class="etap-nr" aria-hidden="true">03</div>
+        <div class="ikona" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg></div>
+        <h3>Raport z problemami na górze</h3>
+        <p>Plik na Twoim dysku. Najpierw sekcja „Najważniejsze”, potem lista kontrolna automatów, wyniki maili i sklep. Claude omawia problemy od najważniejszych.</p>
+        <span class="tag">audyt-getresponse.md / audyt-mailerlite.md</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="dla-kogo">
+  <div class="w">
+    <div class="kicker">Co to jest i dla kogo</div>
+    <h2>Dla właściciela sklepu, który wysyła maile i nie wie, czy automaty pracują</h2>
+    <p class="lead">To dodatek (skill) do Claude Code, asystenta AI działającego w terminalu. Po instalacji piszesz po polsku „zrób audyt mojego GetResponse” albo „zrób audyt mojego MailerLite”, a Claude uruchamia skrypt, czyta wynik i omawia z Tobą problemy, zaczynając od najważniejszych.</p>
+    <div class="siatka">
+      <div class="karta"><div class="nr">Sklep internetowy</div><h3>WooCommerce, Shopify i inne</h3><p>Audyt sprawdza, czy sklep podłączony do systemu mailowego przesyła zamówienia, i czy masz automaty, które powinien mieć każdy sklep.</p></div>
+      <div class="karta"><div class="nr">Agencja, freelancer</div><h3>Przegląd konta klienta</h3><p>Szybki obraz konta przed rozmową: co jest włączone, co jest martwe, gdzie są skargi na spam i wypisy.</p></div>
+      <div class="karta"><div class="nr">Bez Claude Code</div><h3>Sam skrypt w Pythonie</h3><p>Skrypty działają też samodzielnie z terminala. Wymagają Pythona 3.8 lub nowszego, bez dodatkowych pakietów.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="co-wykrywa">
+  <div class="w">
+    <div class="kicker">Co wykrywa</div>
+    <h2>Problemy, które audyt pokazuje na liczbach z Twojego konta</h2>
+    <div class="siatka">
+      <div class="karta"><div class="nr">01</div><h3>Brakujące automaty</h3><p>Czy masz automaty, które powinien mieć każdy sklep: powitanie, porzucony koszyk, po zakupie, drugi zakup i reaktywację nieaktywnych klientów.</p></div>
+      <div class="karta"><div class="nr">02</div><h3>Automaty martwe mimo włączenia</h3><p>Czy ktoś przez nie przechodzi. Częsty problem: automat jest „włączony”, a od miesięcy nikt do niego nie wszedł.</p></div>
+      <div class="karta"><div class="nr">03</div><h3>Wyniki każdego maila</h3><p>Kliknięcia, otwarcia, wypisy, skargi na spam i odbicia, z oznaczeniem maili, które przekraczają progi. W GetResponse otwarcia i kliknięcia są liczone bez botów (pola „ludzkie” z API). W MailerLite otwarcia są surowe (z automatycznymi otwarciami, np. Apple Mail), dlatego tam liczą się kliknięcia.</p></div>
+      <div class="karta"><div class="nr">04</div><h3>Częstotliwość newsletterów</h3><p>Jak często wysyłasz i czy nie męczysz bazy albo czy baza w ogóle dostaje maile.</p></div>
+      <div class="karta"><div class="nr">05</div><h3>Zamówienia ze sklepu</h3><p>Czy sklep w ogóle przesyła zamówienia do systemu mailowego i ilu kupujących nie trafia do bazy.</p></div>
+      <div class="karta"><div class="nr">06</div><h3>Liczenie sprzedaży z maili</h3><p>Czy maile mają włączone śledzenie e-commerce, czyli przypisywanie sprzedaży do konkretnego maila.</p></div>
+    </div>
+    <div class="uwaga"><b>W MailerLite dodatkowo:</b> to, co MailerLite sam oznacza w API: automaty zepsute albo niedokończone, maile w automatach bez linku do wypisu i przyciski bez linku.</div>
+  </div>
+</section>
+
+<section id="automaty">
+  <div class="w">
+    <div class="kicker">Lista kontrolna</div>
+    <h2>5 automatów, które powinien mieć sklep</h2>
+    <p class="lead">Dla każdego automatu audyt sprawdza, czy istnieje, czy jest włączony i czy ktoś przez niego przechodzi. Tak go szuka w każdym systemie. GetResponse ma na liście jeszcze szóstą pozycję, porzucone przeglądanie, dlatego jego raport mówi o 6 automatach.</p>
+    <div class="mapa" role="table" aria-label="Mapa automatów sprawdzanych przez audyt">
+      <div class="mapa-wiersz mapa-naglowek" role="row"><div role="columnheader"></div><div role="columnheader">Automat</div><div role="columnheader">GetResponse</div><div role="columnheader">MailerLite</div></div>
+      <div class="mapa-wiersz" role="row">
+        <div class="mapa-nr" role="cell">1</div>
+        <div role="cell"><h3>Powitanie</h3><small>nowy subskrybent po zapisie</small></div>
+        <div role="cell" class="tak"><span class="etk">GetResponse</span><b>✓</b> szuka po nazwie automatu i tematach maili (także klasyczny autoresponder od dnia zapisu)</div>
+        <div role="cell" class="tak"><span class="etk">MailerLite</span><b>✓</b> po nazwie; wyzwalacz formularz albo grupa liczy się jako powitanie</div>
+      </div>
+      <div class="mapa-wiersz" role="row">
+        <div class="mapa-nr" role="cell">2</div>
+        <div role="cell"><h3>Porzucony koszyk</h3><small>ktoś dodał do koszyka i nie kupił</small></div>
+        <div role="cell" class="tak"><span class="etk">GetResponse</span><b>✓</b> szuka po nazwie automatu i tematach maili</div>
+        <div role="cell" class="tak"><span class="etk">MailerLite</span><b>✓</b> po wyzwalaczu porzuconego koszyka; bez podłączonego sklepu raport pisze, że go wymaga</div>
+      </div>
+      <div class="mapa-wiersz" role="row">
+        <div class="mapa-nr" role="cell">3</div>
+        <div role="cell"><h3>Po zakupie</h3><small>podziękowanie, opinia, cross-sell</small></div>
+        <div role="cell" class="tak"><span class="etk">GetResponse</span><b>✓</b> szuka po nazwie automatu i tematach maili</div>
+        <div role="cell" class="tak"><span class="etk">MailerLite</span><b>✓</b> po wyzwalaczu zakupu</div>
+      </div>
+      <div class="mapa-wiersz" role="row">
+        <div class="mapa-nr" role="cell">4</div>
+        <div role="cell"><h3>Drugi zakup</h3><small>przypomnienie o uzupełnieniu</small></div>
+        <div role="cell" class="tak"><span class="etk">GetResponse</span><b>✓</b> szuka po nazwie automatu i tematach maili</div>
+        <div role="cell" class="tak"><span class="etk">MailerLite</span><b>✓</b> po wyzwalaczu częstotliwości zakupów; razem z reaktywacją jako jedna pozycja</div>
+      </div>
+      <div class="mapa-wiersz" role="row">
+        <div class="mapa-nr" role="cell">5</div>
+        <div role="cell"><h3>Reaktywacja</h3><small>nieaktywni klienci (win-back)</small></div>
+        <div role="cell" class="tak"><span class="etk">GetResponse</span><b>✓</b> szuka po nazwie automatu i tematach maili</div>
+        <div role="cell" class="tak"><span class="etk">MailerLite</span><b>✓</b> po nazwie; razem z drugim zakupem jako jedna pozycja</div>
+      </div>
+    </div>
+    <div class="oba">
+      <span>GetResponse: także porzucone przeglądanie (6. pozycja listy)</span>
+      <span>MailerLite: automaty zepsute i niedokończone</span>
+      <span>MailerLite: maile bez linku do wypisu</span>
+    </div>
+    <p class="szary" style="margin-top:14px;font-size:.9rem">API GetResponse nie pokazuje warunków ani wyzwalaczy automatów, więc automat nazwany nietypowo może istnieć mimo braku trafienia. Raport oznacza to znakiem „❓” i każe sprawdzić w panelu.</p>
+  </div>
+</section>
+
+<section id="programy">
+  <div class="w">
+    <div class="kicker">Obsługiwane programy</div>
+    <h2>Dwa systemy mailowe i Claude Code</h2>
+    <div class="programy">
+      <div class="program">
+        <div class="logo gr"><img src="logos/getresponse-na-ciemne-tlo.svg" alt="GetResponse" width="226" height="30"></div>
+        <p>Oficjalne API v3. Skrypt przyjmuje też adres API i domenę konta GetResponse MAX. Automaty, autorespondery, newslettery, sklepy i zamówienia.</p>
+        <span class="etykieta">obsługiwany</span>
+      </div>
+      <div class="program">
+        <div class="logo ml"><img src="logos/mailerlite-biale.svg" alt="MailerLite" width="143" height="36"></div>
+        <p>Nowy MailerLite (konta od 22.03.2022). Wyzwalacze i kroki automatów, kampanie, sklepy, ustawienia liczenia sprzedaży. MailerLite Classic nie jest obsługiwany.</p>
+        <span class="etykieta">obsługiwany</span>
+      </div>
+      <div class="program">
+        <div class="logo cc">Claude Code</div>
+        <p>Asystent AI firmy Anthropic, w którym działa skill. Instalacja jako plugin z repozytorium na GitHubie, dwie komendy.</p>
+        <span class="etykieta">środowisko</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="instalacja">
+  <div class="w">
+    <div class="kicker">Instalacja krok po kroku</div>
+    <h2>Od zera do raportu</h2>
+
+    <div class="etap">
+      <div class="duzy">1</div>
+      <div>
+        <h3>Przygotowanie</h3>
+        <p>Potrzebujesz trzech rzeczy:</p>
+        <div class="tabela-scroll"><table>
+          <tr><th>Co</th><th>Skąd</th></tr>
+          <tr><td>Claude Code</td><td>Instrukcja instalacji: <a href="https://docs.claude.com/en/docs/claude-code/setup">docs.claude.com</a>. Działa w terminalu na Mac, Linux i Windows.</td></tr>
+          <tr><td>Python 3.8 lub nowszy</td><td>Sprawdzisz komendą <code>python3 --version</code>. Bez dodatkowych pakietów.</td></tr>
+          <tr><td>Klucz API GetResponse <em>albo</em> token MailerLite</td><td>Patrz krok 2.</td></tr>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="etap">
+      <div class="duzy">2</div>
+      <div>
+        <h3>Wygeneruj klucz API w swoim systemie mailowym</h3>
+        <div class="tabela-scroll"><table>
+          <tr><th>System</th><th>Gdzie w panelu</th></tr>
+          <tr><td>GetResponse</td><td><b>Menu → Integracje i API → API → Wygeneruj klucz API</b></td></tr>
+          <tr><td>MailerLite</td><td><b>Integracje → MailerLite API → Wygeneruj nowy token</b></td></tr>
+        </table></div>
+        <div class="uwaga stop"><b>Klucz traktuj jak hasło.</b> Nie udało się potwierdzić, że GetResponse lub MailerLite oferują klucze tylko do odczytu, więc zakładaj, że klucz daje pełny dostęp do konta. Nigdy nie wklejaj go do czatu z Claude.</div>
+      </div>
+    </div>
+
+    <div class="etap">
+      <div class="duzy">3</div>
+      <div>
+        <h3>Ustaw klucz w terminalu i uruchom Claude Code</h3>
+        <p>Komenda poprosi o klucz. Wklej go i naciśnij Enter: nie zobaczysz go na ekranie i nie zostanie w historii terminala.</p>
+        <p class="szary">GetResponse:</p>
+        <div class="kod"><pre>read -rs GETRESPONSE_API_KEY &amp;&amp; export GETRESPONSE_API_KEY
+claude</pre><button type="button">Kopiuj</button></div>
+        <p class="szary">MailerLite:</p>
+        <div class="kod"><pre>read -rs MAILERLITE_API_KEY &amp;&amp; export MAILERLITE_API_KEY
+claude</pre><button type="button">Kopiuj</button></div>
+      </div>
+    </div>
+
+    <div class="etap">
+      <div class="duzy">4</div>
+      <div>
+        <h3>Zainstaluj skill w Claude Code</h3>
+        <p>W oknie Claude Code wpisz po kolei:</p>
+        <div class="kod"><pre>/plugin marketplace add Autilos/audyt-mailingu
+/plugin install audyt-mailingu@audyt-mailingu</pre><button type="button">Kopiuj</button></div>
+        <p class="szary">Repozytorium jest publiczne, logowanie do GitHuba nie jest potrzebne.</p>
+      </div>
+    </div>
+
+    <div class="etap">
+      <div class="duzy">5</div>
+      <div>
+        <h3>Poproś o audyt</h3>
+        <div class="kod"><pre>zrób audyt mojego GetResponse</pre><button type="button">Kopiuj</button></div>
+        <p>albo „zrób audyt mojego MailerLite”. Jeśli napiszesz tylko „zrób audyt mailingu”, Claude zapyta, którego systemu używasz. Raport zapisze się w bieżącym katalogu jako <code>audyt-getresponse.md</code> albo <code>audyt-mailerlite.md</code>.</p>
+      </div>
+    </div>
+
+    <div class="etap">
+      <div class="duzy">6</div>
+      <div>
+        <h3>Po audycie usuń klucz</h3>
+        <p>GetResponse: <b>Menu → Integracje i API → API</b> → usuń klucz. MailerLite: <b>Integracje → MailerLite API</b> → usuń token. Zmienna w terminalu znika, gdy zamkniesz okno terminala.</p>
+      </div>
+    </div>
+
+    <div class="uwaga"><b>Bez Claude Code.</b> Pobierz repozytorium i uruchom skrypt bezpośrednio:
+      <div class="kod"><pre>git clone https://github.com/Autilos/audyt-mailingu.git
+cd audyt-mailingu
+read -rs GETRESPONSE_API_KEY &amp;&amp; export GETRESPONSE_API_KEY
+python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --dni 90 --raport audyt-getresponse.md</pre><button type="button">Kopiuj</button></div>
+      Dla MailerLite: zmienna <code>MAILERLITE_API_KEY</code> i skrypt <code>skills/audyt-mailerlite/scripts/audyt_mailerlite.py</code>.
+    </div>
+  </div>
+</section>
+
+<section id="raport">
+  <div class="w">
+    <div class="kicker">Przykład raportu</div>
+    <h2>Tak wygląda początek raportu</h2>
+    <p class="lead">Fragment raportu GetResponse w układzie, który generuje skrypt. Sklep, nazwy i liczby są zmyślone.</p>
+    <div class="raport">
+      <h4>Audyt e-mail marketingu — GetResponse (2026-11-21)</h4>
+      <div class="meta">Okno newsletterów i zamówień: ostatnie 90 dni (od 2026-08-23). Tylko odczyt, dane zbiorcze, bez danych osobowych.</div>
+      <h5>Najważniejsze</h5>
+      <ol>
+        <li>Brakuje albo nie działa 3 z 6 podstawowych automatów: porzucone przeglądanie, drugi / ponowny zakup, reaktywacja nieaktywnych klientów.</li>
+        <li>1 automat jest włączony, ale nikt przez niego nie przeszedł. Sprawdź w panelu warunek startu.</li>
+        <li>Sklep „Sklep Przykładowy” jest podłączony do GetResponse, ale API nie zwróciło zamówień z tego okresu (ostatnie zwrócone zamówienie: 2026-05-14). Jeśli sklep w tym czasie sprzedawał, integracja najpewniej nie przesyła zamówień.</li>
+        <li>7 z 19 wysyłanych maili nie ma włączonego śledzenia e-commerce — sprzedaż z nich najpewniej nie jest przypisywana.</li>
+      </ol>
+      <h5>Lista kontrolna automatów sklepu</h5>
+      <div class="tabela-scroll"><table>
+        <tr><th>Automat</th><th>Stan</th><th>Znalezione po nazwie</th></tr>
+        <tr><td>Powitanie nowego subskrybenta</td><td>✅ działa</td><td>Powitanie — seria 3 maili</td></tr>
+        <tr><td>Porzucony koszyk</td><td>✅ działa</td><td>Koszyk 1h + 24h</td></tr>
+        <tr><td>Po zakupie (podziękowanie, opinia, cross-sell)</td><td>✅ działa</td><td>Dziękujemy za zakup</td></tr>
+        <tr><td>Porzucone przeglądanie (oglądał produkt, nie dodał do koszyka)</td><td>❓ nie znaleziono po nazwie — sprawdź w panelu</td><td>—</td></tr>
+        <tr><td>Drugi / ponowny zakup (przypomnienie o uzupełnieniu)</td><td>⚠️ jest, ale nie działa (wyłączony albo nikt nie przechodzi)</td><td>Uzupełnij zapas herbaty</td></tr>
+        <tr><td>Reaktywacja nieaktywnych klientów (win-back)</td><td>❓ nie znaleziono po nazwie — sprawdź w panelu</td><td>—</td></tr>
+      </table></div>
+      <div class="fikcja">Dane fikcyjne · przykład układu raportu</div>
+    </div>
+  </div>
+</section>
+
+<section id="bezpieczenstwo">
+  <div class="w">
+    <div class="kicker">Bezpieczeństwo</div>
+    <h2>Klucz zostaje u Ciebie, konto zostaje nietknięte</h2>
+    <div class="siatka dwa">
+      <div class="karta"><div class="nr">Tylko odczyt</div><p>Skrypt wysyła wyłącznie zapytania GET. Niczego nie zmienia, nie wysyła maili, nie kasuje kontaktów. Kod jest krótki i jawny, możesz go przeczytać przed uruchomieniem.</p></div>
+      <div class="karta"><div class="nr">Bez danych kontaktów</div><p>Raport ma liczby zbiorcze oraz nazwy automatów, list i tematy maili z Twojego konta. Adresów e-mail i danych subskrybentów w raporcie nie ma.</p></div>
+      <div class="karta"><div class="nr">Klucz bez pośrednika</div><p>Skrypt czyta klucz ze zmiennej środowiskowej na Twoim komputerze i wysyła go tylko do oficjalnego API GetResponse albo MailerLite. Inne adresy i przekierowania są odrzucane, a klucz nie trafia do raportu ani do komunikatów o błędach.</p></div>
+      <div class="karta"><div class="nr">Wyniki na Twoim dysku</div><p>Raport to plik <code>audyt-*.md</code> w bieżącym katalogu. W Claude Code jego treść trafia do rozmowy, tak jak każdy plik, który Claude czyta.</p></div>
+    </div>
+    <div class="uwaga"><b>Jak skasować klucz:</b> GetResponse → Menu → Integracje i API → API → usuń klucz. MailerLite → Integracje → MailerLite API → usuń token. Lukę w bezpieczeństwie zgłoś prywatnie: w repozytorium zakładka <b>Security → Report a vulnerability</b>, nigdy z kluczem w treści.</div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="w">
+    <div class="kicker">Pytania</div>
+    <h2>Najczęstsze pytania</h2>
+    <details><summary>Czy skill może coś zmienić na moim koncie?</summary><p>Skrypty wysyłają wyłącznie zapytania GET, czyli zapytania odczytu, a skill ma zasadę, że nie proponuje zmian przez API. Poprawki robisz sam w panelu. Sam klucz API daje jednak pełny dostęp do konta, dlatego trzymaj go jak hasło i po audycie usuń.</p></details>
+    <details><summary>Czy potrzebuję płatnego planu?</summary><p>Skill jest darmowy. Claude Code wymaga konta Claude z dostępem do Claude Code. W GetResponse klucz API na planie darmowym działa tylko w okresie próbnym (według pomocy GetResponse, stan na listopad 2026), więc do audytu potrzebny jest plan płatny albo konto w okresie próbnym. MailerLite udostępnia API także na planie darmowym. Jeśli jakaś funkcja nie wchodzi w Twój plan, raport zwykle pokaże ją jako niedostępną albo bez danych.</p></details>
+    <details><summary>Mam sklep na WooCommerce albo Shopify. Czy to zadziała?</summary><p>Tak, jeśli integracja sklepu przesyła zamówienia do GetResponse albo MailerLite. Audyt czyta to, co sklep przesłał do systemu mailowego. Jeśli sklep nie jest podłączony, raport powie, że automaty koszyka i po zakupie nie mają danych.</p></details>
+    <details><summary>Nie mam sklepu, prowadzę usługi albo kanał. Czy coś z tego będzie?</summary><p>Część tak: lista automatów, wyniki maili, wypisy, skargi na spam i częstotliwość newsletterów. Część dotycząca zamówień i koszyka będzie pusta, bo dotyczy sklepów.</p></details>
+    <details><summary>Używam Mailchimpa, Klaviyo albo Brevo.</summary><p>Ten skill obsługuje tylko GetResponse i nowy MailerLite. MailerLite Classic też nie jest obsługiwany.</p></details>
+    <details><summary>Czy automaty rozpoznaje bezbłędnie?</summary><p>W MailerLite audyt rozpoznaje automat po wyzwalaczu, a przy wyzwalaczach ogólnych po nazwie. API GetResponse nie pokazuje warunków automatów, więc tam rozpoznanie idzie po nazwie automatu i tematach maili. Znak „❓” oznacza: sprawdź w panelu, automat może istnieć pod inną nazwą.</p></details>
+    <details><summary>Ile trwa sam audyt?</summary><p>MailerLite: mały sklep to kilkanaście sekund. GetResponse: od kilkudziesięciu sekund do kilku minut przy tysiącach zamówień miesięcznie, bo GetResponse wolno oddaje listę zamówień.</p></details>
+    <details><summary>Mam GetResponse MAX.</summary><p>Skrypt przyjmuje domenę konta (<code>--max-domena</code>) i adres API GetResponse MAX (<code>--api</code>). Inny adres API niż oficjalne adresy GetResponse jest celowo odrzucany.</p></details>
+    <details><summary>Działa na Windows?</summary><p>Claude Code działa na Windows. Komendy z instrukcji są napisane dla terminala bash i zsh (Mac, Linux, Git Bash na Windows).</p></details>
+  </div>
+</section>
+
+<section id="kontakt">
+  <div class="w">
+    <div class="kicker">Kontakt</div>
+    <h2>Pytanie, błąd albo pomoc przy wynikach</h2>
+    <p class="lead">Formularz otworzy Twój program pocztowy z gotową wiadomością do <a href="mailto:wnowak@autilo.eu">wnowak@autilo.eu</a>. Błędy w kodzie możesz też zgłosić w <a href="https://github.com/Autilos/audyt-mailingu/issues">repozytorium</a>. Nie dołączaj klucza API.</p>
+    <form id="formularz">
+      <div><label for="imie">Imię</label><input id="imie" name="imie" autocomplete="name"></div>
+      <div><label for="system">System mailowy</label>
+        <select id="system" name="system"><option>GetResponse</option><option>MailerLite</option><option>Inny</option></select></div>
+      <div><label for="tresc">Wiadomość</label><textarea id="tresc" name="tresc" required></textarea></div>
+      <div><button class="btn pelny" type="submit">Otwórz wiadomość w programie pocztowym</button></div>
+    </form>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="w">
+    <div><b style="color:var(--tekst)">Wojciech Nowak</b> · Marketing Krok po Kroku · <a href="https://marketingkrokpokroku.pl">marketingkrokpokroku.pl</a> · <a href="https://www.linkedin.com/in/wojciech-nowak/">LinkedIn</a> · <a href="https://github.com/Autilos/audyt-mailingu">GitHub</a></div>
+    <div>Kod na licencji MIT.</div>
+    <div class="tm">GetResponse jest znakiem towarowym GetResponse S.A. MailerLite jest znakiem towarowym MailerLite. Claude i Claude Code są znakami towarowymi Anthropic. Logotypy GetResponse i MailerLite pochodzą z oficjalnych materiałów prasowych producentów i są użyte bez zmian, wyłącznie do wskazania, z którymi programami działa skill. Projekt nie jest powiązany z tymi firmami ani przez nie wspierany.</div>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.kod button').forEach(function(b){
+  b.addEventListener('click',function(){
+    var t=b.previousElementSibling.innerText;
+    navigator.clipboard.writeText(t).then(function(){
+      b.textContent='Skopiowano';b.classList.add('ok');
+      setTimeout(function(){b.textContent='Kopiuj';b.classList.remove('ok');},1600);
+    });
+  });
+});
+document.getElementById('formularz').addEventListener('submit',function(e){
+  e.preventDefault();
+  var f=e.target, temat='Audyt mailingu: '+f.system.value;
+  var tresc=f.tresc.value+'\n\n'+(f.imie.value?('— '+f.imie.value):'');
+  location.href='mailto:wnowak@autilo.eu?subject='+encodeURIComponent(temat)+'&body='+encodeURIComponent(tresc);
+});
+</script>
+</body>
+</html>
