@@ -165,13 +165,17 @@ def main():
     if not przeg:
         print(f"Nie znalazłem Chrome, Chromium ani Edge. Zapisałem HTML: {sciezka_html} — otwórz go i wybierz Drukuj → Zapisz jako PDF.")
         return
+    if os.path.exists(pdf):
+        os.remove(pdf)  # stary PDF nie może udawać nowego
     with tempfile.TemporaryDirectory() as profil:
         cmd = [przeg, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={profil}",
                "--no-pdf-header-footer",
                "--disable-background-networking", "--disable-component-update", "--disable-sync", "--disable-extensions",
                "--disable-default-apps", "--no-default-browser-check", "--metrics-recording-only", "--disable-domain-reliability", f"--print-to-pdf={pdf}", "file://" + sciezka_html]
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-    if r.returncode != 0 or not os.path.exists(pdf):
+    # Liczy się, czy PDF powstał: Chrome uruchomiony bez zwykłego środowiska (np. env -i) potrafi zapisać PDF
+    # i mimo to zakończyć się kodem różnym od 0.
+    if not os.path.exists(pdf) or os.path.getsize(pdf) == 0:
         print(f"Przeglądarka nie zapisała PDF (kod {r.returncode}). HTML jest tutaj: {sciezka_html} — otwórz i wydrukuj do PDF.")
         sys.exit(1)
     if not a.html:

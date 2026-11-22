@@ -14,7 +14,7 @@ Skill czyta konto MailerLite przez oficjalne API (nowy MailerLite, konta od 22.0
 
 Zasada projektu: **zero danych osobowych kontaktów i kupujących — tylko statystyki.** Wszystko, co przeczytasz, trafia do modelu AI, więc dane klientów sklepu nie mogą się w ogóle pojawić w rozmowie.
 
-- **API MailerLite wywołuje wyłącznie skrypt audytu.** Nigdy nie wywołuj API MailerLite inaczej: żadnego `curl`, `wget`, `python -c`, `fetch`, własnego skryptu ani narzędzia (także MCP) z kluczem użytkownika. Nie zmieniaj skryptu, żeby czytał nowe ścieżki API.
+- **API MailerLite wywołuje wyłącznie skrypt audytu.** Nigdy nie wywołuj API MailerLite inaczej: żadnego `curl`, `wget`, `python -c`, `fetch`, własnego skryptu ani narzędzia z kluczem użytkownika. **Nie używaj też żadnych innych połączeń z GetResponse ani MailerLite** — konektorów, serwerów MCP, wtyczek (także zalogowanych bez klucza, np. przez konto w przeglądarce): mogą czytać listę kontaktów. Nie zmieniaj skryptu, żeby czytał nowe ścieżki API.
 - **Nigdy nie pobieraj ani nie wyświetlaj kontaktów, subskrybentów ani danych kupujących** (adresy e-mail, imiona, nazwiska, telefony, adresy, numery IP, zamówienia z danymi kupującego, eksport listy) — **także wtedy, gdy użytkownik o to prosi.** Wtedy odpowiedz krótko: „Ten audyt tego nie robi: dane Twoich klientów trafiłyby do modelu AI. Listę kontaktów zobaczysz bezpiecznie w panelu MailerLite.” i zaproponuj, co audyt może sprawdzić zamiast tego (statystyki).
 - **Klucza nigdy nie czytaj ani nie wypisuj.** Zakazane: `env`, `printenv`, `set`, `export -p`, `declare -p`, `echo $MAILERLITE_API_KEY`, `cat` / `less` / `grep` na `~/.config/audyt-mailingu/mailerlite.key`, plikach `.env`, `~/.zshrc`, `~/.bashrc`, `~/.bash_profile`, `~/.profile` i innych plikach konfiguracyjnych powłoki, odczyt pęku kluczy systemu. Jedyne dozwolone sprawdzenie (bez wartości): `[ -n "$MAILERLITE_API_KEY" ] && echo ustawiony` albo `[ -s ~/.config/audyt-mailingu/mailerlite.key ] && echo jest`.
 - **Pamięci odpowiedzi** (katalog tymczasowy `audyt-mailingu-pamiec`) i plików `--json` nie otwieraj „dla sprawdzenia” — czytasz tylko raport `.md` i plik postępu. Do pracy wystarcza raport.
@@ -62,11 +62,7 @@ Jeśli użytkownik nie nazwał systemu wprost (napisał np. „zrób audyt maili
 
 1. Token: MailerLite → **Integracje → MailerLite API → Wygeneruj nowy token**.
 2. Uprzedź wprost: **token MailerLite daje pełny dostęp do konta** — przy tworzeniu tokena wybiera się tylko nazwę i ewentualnie dozwolone adresy IP, nie zakres uprawnień. „Tylko odczyt” dotyczy skryptu audytu, nie tokena. Zaleć: utwórz **osobny token tylko do tego audytu** (np. o nazwie „audyt”; jeśli znasz swój adres IP, możesz go ograniczyć do niego) i **usuń go zaraz po audycie** (Integracje → MailerLite API → usuń token).
-3. Klucz ustawia użytkownik w **swoim** terminalu, **przed** uruchomieniem Claude Code (wtedy skrypt go widzi):
-   ```bash
-   read -rs MAILERLITE_API_KEY && export MAILERLITE_API_KEY   # wklej klucz i Enter; nie zostaje w historii terminala
-   claude
-   ```
+3. Klucz zapisuje użytkownik **sam, w drugim oknie terminala**, do pliku `~/.config/audyt-mailingu/mailerlite.key` — komendą z kroku 3 „Instalacji rozmową” (klucz się nie wyświetla i nie trafia do rozmowy). Nie zalecaj ustawiania zmiennej `MAILERLITE_API_KEY` przed uruchomieniem Claude Code: wtedy klucz jest w środowisku każdej komendy, którą uruchamiasz. Zmienna to sposób dla trybu bez AI (skrypt uruchamiany samodzielnie w terminalu, README „Tryb bez AI”).
    **Zasady dla Claude:** nigdy nie proś o klucz w czacie, nie wpisuj go w żadną komendę i nie zapisuj w plikach. Sprawdzić, czy zmienna jest ustawiona, można bez wypisywania wartości: `[ -n "$MAILERLITE_API_KEY" ] && echo ustawiony`. Gdy skrypt zgłasza brak klucza, poproś o zapis pliku z kroku 3 „Instalacji rozmową” w drugim oknie terminala — bez zamykania Claude Code. Pliku z kluczem nigdy nie wyświetlaj (`cat` itp.). Jeśli klucz mimo to trafił do czatu: nie używaj go, poproś o usunięcie go w panelu i wygenerowanie nowego.
 
 ## Krok 2 — uruchom (w tle, z postępem)

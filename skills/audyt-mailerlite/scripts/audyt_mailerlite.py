@@ -32,7 +32,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from seria_powitalna import klasyfikuj, wniosek_serii  # noqa: E402
 from rekomendacje import rekomendacja_serii, uloz, sekcja_dla_ai  # noqa: E402
-from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku, przytnij, maskuj_wszystko  # noqa: E402
+from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku, przytnij, maskuj_wszystko, KOD  # noqa: E402
 
 API = "https://connect.mailerlite.com/api"
 HOST_API = "connect.mailerlite.com"
@@ -72,7 +72,7 @@ def sciezka_dozwolona(url):
 # Z odpowiedzi zostają WYŁĄCZNIE te pola (wspolne.przytnij) — wszystko inne, np. adresy nadawcy (from, reply_to),
 # dane dostępowe sklepu czy pola, które MailerLite doda w przyszłości, jest odrzucane od razu po odebraniu strony.
 _STAWKA = {"float": True, "string": True}
-_STRONA = {"next": True}
+_STRONA = {"next": True}  # link do kolejnej strony; sprawdzany: tylko adres API MailerLite
 _STATY_MAILA = {k: _STAWKA for k in ("open_rate", "click_rate", "unsubscribe_rate", "spam_rate", "hard_bounce_rate")}
 _STATY_MAILA["sent"] = True
 _TRESC = {"html": True, "plain": True}
@@ -100,22 +100,22 @@ WZORY_ODPOWIEDZI = [
                                                        "conversions_count": True, "conversion_rate": _STAWKA}, "links": _STRONA}),
     (r"^/ecommerce/settings$", {"data": {"ecommerce_tracking_in_campaigns": True, "ecommerce_tracking_in_automations": True,
                                          "ecommerce_attribution_window": True}}),
-    (r"^/ecommerce/shops$", {"data": {"id": True, "name": True, "platform": True, "enabled": True, "internal": True, "currency": True}, "links": _STRONA}),
+    (r"^/ecommerce/shops$", {"data": {"id": KOD, "name": True, "platform": KOD, "enabled": True, "internal": True, "currency": KOD}, "links": _STRONA}),
     # Raport zbiorczy sklepu: wyłącznie liczby; data dnia i wszystko inne odpada.
     (r"^/ecommerce/shops/[0-9]+/reports/stats$", {"data": {
         "ecommerce": {k: _liczba_albo_nic for k in ("orders_count", "revenue", "average_order_value")},
         "series": _ZAMOWIENIA_DZIENNIE}}),
     (r"^/automations$", {"data": {
-        "name": True, "enabled": True, "created_at": True, "broken": True, "complete": True,
-        "warnings": {"type": True, "message": True, "code": True},  # napis przechodzi; ze słownika tylko te pola
+        "name": True, "enabled": True, "created_at": KOD, "broken": True, "complete": True,
+        "warnings": {"type": KOD, "message": True, "code": KOD},  # napis przechodzi; ze słownika tylko te pola
         "stats": {"completed_subscribers_count": True, "subscribers_in_queue_count": True, "sent": True,
                   "click_rate": _STAWKA, "unsubscribe_rate": _STAWKA},
-        "triggers": {"type": True}, "trigger_data": {"track_ecommerce": True},
-        "steps": {"id": True, "parent_id": True, "type": True, "value": True, "unit": True, "delay": {"value": True, "unit": True},
+        "triggers": {"type": KOD}, "trigger_data": {"track_ecommerce": True},
+        "steps": {"id": KOD, "parent_id": KOD, "type": KOD, "value": KOD, "unit": KOD, "delay": {"value": KOD, "unit": KOD},
                   "subject": True, "content": _TRESC, "has_unsubscribe_url": True, "has_unlinked_buttons": True, "broken": True,
                   "email": {"subject": True, "content": _TRESC, "html": True, "plain_text": True, "stats": _STATY_MAILA}},
     }, "links": _STRONA}),
-    (r"^/campaigns$", {"data": {"name": True, "finished_at": True, "started_at": True, "scheduled_for": True,
+    (r"^/campaigns$", {"data": {"name": True, "finished_at": KOD, "started_at": KOD, "scheduled_for": KOD,
                                 "settings": {"ecommerce_tracking": True},
                                 "emails": {"subject": True, "stats": _STATY_MAILA}}, "links": _STRONA}),
 ]
@@ -197,8 +197,9 @@ class ML:
                 if e.code == 401:
                     sys.exit("Błąd 401: token API nieprawidłowy albo usunięty (MailerLite → Integracje → MailerLite API).")
                 if e.code in (403, 404):
-                    if sciezka not in self.niedostepne:
-                        self.niedostepne.append(sciezka)
+                    sama = urllib.parse.urlsplit(url).path[len(urllib.parse.urlsplit(API).path):]  # bez ?cursor=…
+                    if sama not in self.niedostepne:
+                        self.niedostepne.append(sama)
                     return None
                 if e.code >= 500 and proba < 4:
                     time.sleep(3 * (proba + 1))
@@ -467,7 +468,7 @@ def main():
         for k in x.get("steps") or []:
             if k.get("type") != "email":
                 continue
-            e = k.get("email") or {}
+            e = k.get("email") if isinstance(k.get("email"), dict) else {}
             m = wyniki_maila(e.get("stats"))
             m["temat"] = czysc(k.get("subject") or e.get("subject"))
             m["dzien"] = None if dni_kroku.get(k.get("id")) is None else int(dni_kroku[k.get("id")])
@@ -486,7 +487,7 @@ def main():
                 m["problemy"].append("mail zepsuty")
             maile.append(m)
         D["automaty"].append({"nazwa": czysc(x.get("name")) or "—", "wlaczony": bool(x.get("enabled")), "utworzony": utw,
-                              "wyzwalacze": [t.get("type") for t in x.get("triggers") or []],
+                              "wyzwalacze": [t.get("type") for t in x.get("triggers") or [] if isinstance(t, dict) and t.get("type")],
                               "kategoria": kategoria(x), "zakonczyli": zak, "w_kolejce": kol, "wyslane": wys,
                               "klikniecia_proc": stawka(st, "click_rate"), "wypisy_proc": stawka(st, "unsubscribe_rate"),
                               "uwagi": uwagi, "maile": maile})
@@ -501,7 +502,7 @@ def main():
             continue
         if kiedy < od:
             continue
-        e = (c.get("emails") or [{}])[0]
+        e = next((x for x in c.get("emails") or [] if isinstance(x, dict)), {})
         m = wyniki_maila(e.get("stats"))
         m.update({"temat": czysc(e.get("subject") or c.get("name")), "wyslany": kiedy,
                   "sledzi_sprzedaz": bool((c.get("settings") or {}).get("ecommerce_tracking"))})
