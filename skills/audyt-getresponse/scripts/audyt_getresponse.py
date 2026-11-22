@@ -6,7 +6,8 @@ newslettery z ostatnich N dni, sklep (zamówienia, ile bez kontaktu, przychód p
 i listę kontrolną automatów, które powinien mieć każdy sklep internetowy.
 
 Nie zmienia niczego na koncie. Wywołuje wyłącznie zapytania GET.
-Nie zapisuje adresów e-mail ani danych osobowych — tylko liczby zbiorcze.
+Nie zapisuje adresów e-mail ani danych osobowych — tylko liczby zbiorcze. Z każdej odpowiedzi API od razu zostają
+wyłącznie pola potrzebne audytowi (WZORY_ODPOWIEDZI); reszta jest odrzucana, zanim trafi na dysk.
 
 Użycie:
   export GETRESPONSE_API_KEY=...            # Menu → Integracje i API → API
@@ -32,7 +33,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from seria_powitalna import klasyfikuj, wniosek_serii  # noqa: E402
 from rekomendacje import rekomendacja_serii, uloz, sekcja_dla_ai  # noqa: E402
-from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku  # noqa: E402
+from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku, przytnij, maskuj_wszystko, CALOSC  # noqa: E402
 
 PRZERWA = 0.3  # s między zapytaniami; limit GR to 80/s, ale w praktyce ~4/s bez 429
 MAX_STRON_ZAMOWIEN = 120  # 120 × 500 zamówień — bezpiecznik dla bardzo dużych sklepów
@@ -72,6 +73,48 @@ def sciezka_dozwolona(sciezka, params=None):
         return bool(pola) and pola <= POLA_ZAMOWIEN
     return True
 
+
+
+def _domena(adres):
+    """Adres nadawcy → sama domena (np. „@sklep.pl”). Pełnego adresu nie trzymamy nawet w pamięci na dysku."""
+    return "@" + str(adres or "").split("@")[-1].lower() if adres else adres
+
+
+_TRESC = {"subject": True, "content": {"html": True, "plain": True}}
+# flagi wiadomości (np. ecommerce_tracking) — API podaje je jako listę albo tekst; zostają tylko napisy
+_FLAGI = lambda v: [x for x in v if isinstance(x, str)] if isinstance(v, list) else (v if isinstance(v, str) else None)  # noqa: E731
+# Z odpowiedzi zostają WYŁĄCZNIE te pola (wspolne.przytnij). CALOSC tylko przy statystykach (same liczby zbiorcze).
+WZORY_ODPOWIEDZI = [(re.compile(r), w) for r, w in (
+    (r"^/campaigns$", {"campaignId": True, "name": True}),
+    (r"^/campaigns/statistics/(list-size|subscriptions|removals)$", CALOSC),
+    (r"^/workflow$", {"workflowId": True, "name": True, "status": True, "dateStart": True,
+                      "subscriberStatistics": {"completedCount": True, "inProgressCount": True}}),
+    (r"^/workflow/[A-Za-z0-9]+$", {"workflowId": True, "name": True, "status": True, "dateStart": True,
+                                   "subscriberStatistics": {"completedCount": True, "inProgressCount": True}}),
+    (r"^/newsletters$", dict({k: True for k in ("newsletterId", "name", "subject", "status", "createdOn", "sendOn")}, flags=_FLAGI)),
+    (r"^/newsletters/[A-Za-z0-9]+/statistics$", CALOSC),
+    (r"^/newsletters/[A-Za-z0-9]+$", _TRESC),
+    (r"^/autoresponders$", {"autoresponderId": True, "name": True, "subject": True, "status": True, "createdOn": True,
+                            "flags": _FLAGI,
+                            "campaignId": True, "campaign": {"campaignId": True},
+                            "triggerSettings": {"dayOfCycle": True, "subscribedCampaign": {"campaignId": True}}}),
+    (r"^/autoresponders/[A-Za-z0-9]+/statistics$", CALOSC),
+    (r"^/autoresponders/[A-Za-z0-9]+$", _TRESC),
+    (r"^/shops$", {"shopId": True, "name": True, "currency": True}),
+    (r"^/shops/[A-Za-z0-9]+/orders$", {k: True for k in POLA_ZAMOWIEN}),
+    (r"^/statistics/ecommerce/(performance|revenue)$", CALOSC),
+    (r"^/forms$", {k: True for k in ("formId", "name", "status", "visitors", "uniqueVisitors", "subscribed", "subscriptionRate", "createdOn")}),
+    (r"^/from-fields$", {"email": _domena, "isActive": True, "isDefault": True,
+                         "domain": {"status": True, "DKIMWarning": True, "hasDMARCWarning": True}}),
+)]
+
+
+def przytnij_odpowiedz(sciezka, d):
+    """Odpowiedź API → tylko potrzebne pola. Ścieżka bez wzoru = nic nie zostaje (bezpieczny domyślny wybór)."""
+    wzor = next((w for r, w in WZORY_ODPOWIEDZI if r.match(sciezka)), None)
+    return przytnij(d, wzor) if wzor is not None else None
+
+
 # Automaty, które powinien mieć sklep internetowy. Wykrywane po NAZWIE automatu i tematach maili —
 # API GetResponse nie pokazuje warunków ani wyzwalaczy automatu, więc „nie znaleziono” = sprawdź w panelu.
 LISTA_KONTROLNA = [
@@ -104,8 +147,9 @@ class GR:
         if params:
             url += ("&" if "?" in url else "?") + urllib.parse.urlencode(params, safe="[]")
         z_pamieci = self.pamiec.czytaj(url) if self.pamiec else None
-        if z_pamieci is not None:
-            return z_pamieci["d"], z_pamieci["h"]
+        if isinstance(z_pamieci, dict):
+            # pamięć ze starszej wersji też przechodzi przez sito
+            return przytnij_odpowiedz(sciezka, z_pamieci.get("d")), z_pamieci.get("h") or {}
         for proba in range(5):
             time.sleep(PRZERWA)
             self.zapytan += 1
@@ -113,24 +157,30 @@ class GR:
                 r = _OTWIERACZ.open(urllib.request.Request(url, headers=self.h), timeout=240)
                 surowe = r.read() or b"null"
                 try:
-                    d = json.loads(surowe)
-                    h = {k.lower(): v for k, v in r.headers.items() if k.lower() in ("totalpages", "totalcount")}
-                    if self.pamiec:
-                        self.pamiec.zapisz(url, {"d": d, "h": h})
-                    return d, h
+                    d = przytnij_odpowiedz(sciezka, json.loads(surowe))
                 except ValueError:
                     sys.exit(f"API zwróciło odpowiedź, która nie jest JSON-em ({sciezka}). Sprawdź adres --api i połączenie (proxy, zapora).")
+                finally:
+                    surowe = None  # surowa odpowiedź nie jest nigdzie zapisywana ani wypisywana
+                h = {k.lower(): v for k, v in r.headers.items() if k.lower() in ("totalpages", "totalcount")}
+                if self.pamiec:
+                    self.pamiec.zapisz(url, {"d": d, "h": h})
+                return d, h
             except (socket.timeout, TimeoutError, http.client.IncompleteRead, ConnectionError):
                 if proba < 4:
                     print("  serwer GetResponse odpowiada wolno — ponawiam", file=sys.stderr, flush=True)
                     time.sleep(5 * (proba + 1))
                     continue
-                raise
+                sys.exit("Połączenie z API GetResponse zrywa się — przerwano. Uruchom ponownie za kilka minut.")
             except urllib.error.HTTPError as e:
+                e.close()  # treść odpowiedzi z błędem nie jest czytana ani wypisywana (mogłaby zawierać dane)
                 if 300 <= e.code < 400:
                     sys.exit(f"API odpowiedziało przekierowaniem ({e.code}, {sciezka}) — przerwano, klucz nie został wysłany pod inny adres.")
                 if e.code == 429:
-                    czekaj = int(e.headers.get("X-RateLimit-Reset") or 30)
+                    try:
+                        czekaj = int(e.headers.get("X-RateLimit-Reset") or 30)
+                    except ValueError:
+                        czekaj = 30
                     print(f"  limit zapytań — czekam {czekaj} s", file=sys.stderr)
                     time.sleep(min(czekaj, 600))
                     continue
@@ -147,12 +197,12 @@ class GR:
                 if e.code >= 500 and proba < 4:
                     time.sleep(3 * (proba + 1))
                     continue
-                raise
+                sys.exit(f"API GetResponse zwróciło błąd {e.code} dla {sciezka} — przerwano.")
             except urllib.error.URLError:
                 if proba < 4:
                     time.sleep(3 * (proba + 1))
                     continue
-                raise
+                sys.exit("Brak połączenia z API GetResponse (sieć, proxy albo zapora) — przerwano. Sprawdź adres --api.")
         sys.exit(f"API GetResponse nie odpowiedziało po 5 próbach ({sciezka}) — przerwano, żeby raport nie był oparty na brakujących danych. Uruchom ponownie za kilka minut.")
 
     def wszystkie(self, sciezka, params=None, per_page=100, max_stron=50, opcjonalny=False):
@@ -590,6 +640,7 @@ def main():
     D["niedostepne"] = gr.niedostepne
     D["ostrzezenia"] = gr.ostrzezenia
 
+    D = maskuj_wszystko(D)  # e-mail albo telefon wpisany w nazwę listy, automatu czy temat → zamaskowany
     with open(a.raport, "w", encoding="utf-8") as plik:
         plik.write(raport(D))
     if a.json:

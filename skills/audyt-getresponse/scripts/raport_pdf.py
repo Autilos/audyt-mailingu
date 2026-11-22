@@ -4,6 +4,8 @@
 Bez dodatkowych pakietów: zamienia Markdown na HTML własnym, prostym konwerterem i drukuje go do PDF
 przeglądarką Chrome / Chromium / Edge w trybie bez okna (osobny, tymczasowy profil — nie dotyka Twojego).
 Jeśli przeglądarki nie ma, zostawia plik HTML: otwórz go i wybierz Drukuj → Zapisz jako PDF.
+Strona nie pobiera nic z sieci: blokada w nagłówku HTML (Content-Security-Policy) zabrania wczytywania czcionek,
+obrazków i skryptów, a przeglądarka startuje bez usług w tle (aktualizacje, synchronizacja, statystyki).
 
 Użycie:
   python3 raport_pdf.py audyt-getresponse.md            # → audyt-getresponse.pdf
@@ -41,6 +43,9 @@ a { color: #8a1020; }
 .stopka { margin-top: 26px; text-align: center; font-size: 8.5pt; color: #6e2028; border-top: 2px solid #d7bb79; padding-top: 6px; page-break-inside: avoid; }
 """
 
+
+# Żadnych zasobów z sieci: tylko wbudowany styl. Linki w PDF są klikalne, ale przeglądarka niczego nie wczytuje.
+CSP = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src \'none\'; font-src \'none\'">'
 
 RE_MD_LINK = re.compile(r"\[([^\]]+)\]\((https?://[^)\s]+)\)")
 RE_URL = re.compile(r"https?://[^\s<>()\[\]„”\"']+[^\s<>()\[\]„”\"'.,;:!?)]")
@@ -127,7 +132,7 @@ def dokument(md):
     md = bez_sekcji_dla_ai(md)
     tytul = next((re.sub(r"^#\s+", "", x) for x in md.splitlines() if x.startswith("# ")), "Audyt e-mail marketingu")
     tresc = md_na_html("\n".join(x for x in md.splitlines() if x.strip() != f"# {tytul}"))
-    return (f"<!doctype html><html lang=\"pl\"><head><meta charset=\"utf-8\"><title>{html.escape(tytul)}</title>"
+    return (f"<!doctype html><html lang=\"pl\"><head><meta charset=\"utf-8\">{CSP}<title>{html.escape(tytul)}</title>"
             f"<style>{CSS}</style></head><body>"
             f"<div class=\"naglowek\"><div class=\"marka\">Audyt e-mail marketingu</div><h1>{inline(tytul)}</h1></div>"
             f"{tresc}<div class=\"stopka\">{STOPKA_HTML}</div></body></html>")
@@ -162,7 +167,9 @@ def main():
         return
     with tempfile.TemporaryDirectory() as profil:
         cmd = [przeg, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={profil}",
-               "--no-pdf-header-footer", f"--print-to-pdf={pdf}", "file://" + sciezka_html]
+               "--no-pdf-header-footer",
+               "--disable-background-networking", "--disable-component-update", "--disable-sync", "--disable-extensions",
+               "--disable-default-apps", "--no-default-browser-check", "--metrics-recording-only", "--disable-domain-reliability", f"--print-to-pdf={pdf}", "file://" + sciezka_html]
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     if r.returncode != 0 or not os.path.exists(pdf):
         print(f"Przeglądarka nie zapisała PDF (kod {r.returncode}). HTML jest tutaj: {sciezka_html} — otwórz i wydrukuj do PDF.")

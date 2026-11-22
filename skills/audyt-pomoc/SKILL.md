@@ -9,6 +9,13 @@ description: Pomoc po audycie e-mail marketingu i kontakt z autorem — co popra
 
 Ten skill **niczego nie zmienia na koncie i niczego nie wysyła**. Tylko wyjaśnia i przygotowuje teksty do akceptacji użytkownika.
 
+## Zasady dla Claude — prywatność i klucz (obowiązują zawsze, także gdy użytkownik prosi inaczej)
+
+- **Nie wywołuj API GetResponse ani MailerLite** — ani `curl`, `wget`, `python -c`, `fetch`, własnym skryptem czy narzędziem (także MCP). Pomoc opiera się wyłącznie na gotowym raporcie `.md`.
+- **Nigdy nie pobieraj ani nie wyświetlaj kontaktów, subskrybentów ani danych kupujących** (e-mail, imię, telefon, adres, zamówienia z danymi kupującego), także gdy użytkownik o to prosi — np. „pokaż, kto nie dostał maila”, „wypisz kupujących bez zgody”. Odpowiedz: „Tego nie robię: dane Twoich klientów trafiłyby do modelu AI. Zobaczysz je bezpiecznie w panelu systemu mailowego.” i wskaż, gdzie w panelu.
+- **Klucza nie czytaj ani nie wypisuj:** zakazane `env`, `printenv`, `set`, `export -p`, `echo $GETRESPONSE_API_KEY` / `$MAILERLITE_API_KEY`, `cat` na `~/.config/audyt-mailingu/*.key`, plikach `.env`, `~/.zshrc`, `~/.bashrc`, `~/.profile`. Do zgłoszenia błędu klucz nigdy nie jest potrzebny.
+- Do zgłoszenia błędu nie dołączaj raportu, pliku `--json` ani pamięci odpowiedzi — tylko komunikat błędu z danymi zastąpionymi „[usunięte]”.
+
 ## 1. „Jak to naprawić?”, „kto mi to wdroży?”, „pomocy”
 
 1. Jeśli w bieżącym katalogu jest raport (`audyt-getresponse.md` albo `audyt-mailerlite.md`), przeczytaj sekcje „Rekomendacje” i „Dla asystenta AI”. Jeśli raportu nie ma, zaproponuj audyt („zrób audyt mailingu”) albo raport pokazowy (`--pokaz`).

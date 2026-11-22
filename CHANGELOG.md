@@ -1,5 +1,20 @@
 # Zmiany
 
+## 0.3.4 — 2026-11-22
+
+Prywatność „nawet przypadkiem”: zero danych osobowych kontaktów i kupujących, tylko statystyki.
+
+- Sito odpowiedzi w obu skryptach: z każdej odpowiedzi API od razu zostają tylko pola potrzebne audytowi, a reszta jest odrzucana, zanim trafi do pamięci na dysku, raportu albo na ekran. Dotyczy to też pól, które GetResponse czy MailerLite dodadzą w przyszłości. Z adresu nadawcy w GetResponse zostaje sama domena.
+- Adres e-mail i numer telefonu wpisany w nazwę listy, automatu, formularza albo temat maila jest w raporcie i pliku JSON ukryty („[e-mail ukryty]”, „[telefon ukryty]”).
+- Błędy API: skrypt nie czyta i nie wypisuje treści odpowiedzi z błędem; zamiast surowych komunikatów Pythona (traceback) — jedno zdanie po polsku.
+- MailerLite: klucz idzie tylko pod `https://connect.mailerlite.com` — dodatkowo sprawdzany protokół i host (także w linkach do kolejnej strony).
+- Pamięć odpowiedzi: wyłącza się, gdy katalog tymczasowy należy do innego użytkownika; odpowiedzi zapisane przez starszą wersję też przechodzą przez sito.
+- PDF: blokada pobierania czegokolwiek z sieci (Content-Security-Policy) i przeglądarka bez usług w tle.
+- SKILL.md (oba audyty i pomoc): „Zasady dla Claude — prywatność i klucz” — żadnych wywołań API poza skryptem, żadnych kontaktów ani danych kupujących nawet na prośbę użytkownika (z wyjaśnieniem dlaczego), zakaz czytania klucza (`env`, `printenv`, pliki konfiguracyjne powłoki, `.env`, plik klucza).
+- README: nowa sekcja „Bezpieczeństwo” — klucze dają pełny dostęp do konta, „tylko odczyt” dotyczy skryptu; osobny klucz do audytu i usunięcie go zaraz po nim. MailerLite: uczciwie, że API zwraca zamówienie w całości z danymi kupującego, więc audyt zamówień nie czyta.
+- `.gitignore`: także PDF, HTML, pliki postępu i pliki kluczy.
+- Nowy dokument `docs/BEZPIECZENSTWO-przeglad.md` i testy `tests/test_v034.py` (fikcyjne dane kupującego doklejone do każdej odpowiedzi nie wychodzą poza skrypt; tryb pokazowy nie dotyka sieci ani klucza).
+
 ## 0.3.3 — 2026-11-21
 
 - Duże konta: skill uruchamia audyt od razu w tle i co chwilę czyta plik postępu (`<raport>.postep.txt`); domyślny okres 30 dni (90 na prośbę).
