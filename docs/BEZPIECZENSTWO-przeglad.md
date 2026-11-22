@@ -1,4 +1,4 @@
-# Przegląd szczelności — v0.3.4 (22.11.2026)
+# Przegląd szczelności — v0.3.4 (22.11.2026), uzupełniony w v0.3.5 (23.11.2026)
 
 Zasada: **zero danych osobowych kontaktów i kupujących — tylko statystyki.** Sprawdziliśmy każdą drogę, którą dane klientów sklepu albo klucz API mogłyby zostać pobrane lub wyjść poza skrypt. Przy każdej: czy była dziurą i co zrobiliśmy. Testy do tego przeglądu: `tests/test_v034.py`.
 
@@ -8,7 +8,8 @@ Zasada: **zero danych osobowych kontaktów i kupujących — tylko statystyki.**
 |---|---|---|
 | MailerLite: zamówienia sklepu | Nie w v0.3.3 (zamówień skrypt nie czyta od v0.3.0; starsza kopia z v0.2 je czytała). API zwraca zamówienie zawsze w całości: e-mail, imię, nazwisko, telefon i IP kupującego; parametru do wyboru pól nie ma ([dokumentacja](https://developers.mailerlite.com/ecommerce/orders)). | Zostaje zablokowane w spisie dozwolonych ścieżek i w teście. README mówi to wprost. |
 | MailerLite: automaty, kampanie | Częściowo: odpowiedź zawiera adres nadawcy i adres do odpowiedzi (`from`, `reply_to`). Nie trafiał do raportu, ale leżał w pamięci odpowiedzi na dysku. | Sito odpowiedzi — zostają tylko potrzebne pola. |
-| MailerLite: sklepy | Częściowo: obiekt sklepu może mieć dane dostępowe do sklepu (`access_data`, np. klucze WooCommerce) i grupę. Leżały w pamięci na dysku. | Sito: zostaje nazwa, platforma, włączony, wewnętrzny, waluta. |
+| MailerLite: sklepy | Częściowo: obiekt sklepu może mieć dane dostępowe do sklepu (`access_data`, np. klucze WooCommerce) i grupę. Leżały w pamięci na dysku. | Sito: zostaje identyfikator sklepu (potrzebny do raportu sprzedaży), nazwa, platforma, włączony, wewnętrzny, waluta. |
+| MailerLite: raport sprzedaży sklepu (`/ecommerce/shops/{id}/reports/stats`, od v0.3.5) | Nie: sprawdzone na żywym koncie 23.11.2026 (wypisana tylko struktura, bez wartości) — `data.ecommerce`: liczba zamówień, przychód, średnie zamówienie (liczby); `data.series`: dzień po dniu data i liczby zamówień i przychodu z kampanii i z automatów. Żadnych pól o kupujących. Okres `start_date`–`end_date` wymagany, najwyżej 365 dni. | Ścieżka w spisie dozwolonych tylko z identyfikatorem z cyfr. Sito przepuszcza wyłącznie liczby (tekst, słownik albo lista w tych polach odpadają); data dnia i każde inne pole są odrzucane. Test z doklejonymi fikcyjnymi danymi kupującego (`tests/test_v035.py`). |
 | MailerLite: grupy, formularze, ustawienia e-commerce | Nie (liczby i nazwy). | Sito i tak je przycina. |
 | GetResponse: zamówienia | Nie: tylko pola numer, kwota, data, status, przypisany kontakt (sam identyfikator, liczymy tylko, czy jest). | Bez zmian, plus sito. |
 | GetResponse: adresy nadawcy | Częściowo: pełny adres i nazwa nadawcy (np. imię właściciela) leżały w pamięci na dysku; raport pokazywał tylko domenę. | Sito: z adresu zostaje sama domena już w pamięci. |
@@ -57,6 +58,6 @@ Zasada: **zero danych osobowych kontaktów i kupujących — tylko statystyki.**
 - **Treść raportu trafia do rozmowy z AI**: nazwy list i automatów, tematy maili, liczby. To dane firmy, nie klientów; adresy i telefony w tych nazwach są ukrywane, ale inne dane wpisane w nazwy (np. samo imię i nazwisko) rozpoznać się nie da.
 - **Treść maili** jest czytana tylko do oceny „sprzedażowy / wartościowy” i nie trafia do raportu (raport pokazuje tylko, jakie sygnały znaleziono, np. „kod rabatowy”).
 
-## Na później (wymaga sprawdzenia na żywym API)
+## Dodane po sprawdzeniu na żywym API
 
-MailerLite ma zbiorczy raport sprzedaży z maili: `GET /ecommerce/shops/{id}/reports/stats?start_date=…&end_date=…` — liczba zamówień, przychód, średnia wartość, dzień po dniu z podziałem na kampanie i automaty, bez danych kupującego ([dokumentacja](https://developers.mailerlite.com/ecommerce/shops)). Dodamy go do spisu dozwolonych ścieżek dopiero po sprawdzeniu na żywym koncie, że odpowiedź nie zawiera danych osobowych (zasada z `CLAUDE.md`).
+- v0.3.5: raport sprzedaży sklepu MailerLite `GET /ecommerce/shops/{id}/reports/stats?start_date=…&end_date=…` ([dokumentacja](https://developers.mailerlite.com/ecommerce/shops)) — po sprawdzeniu struktury odpowiedzi na żywym koncie (same nazwy pól i typy, bez wartości, zgodnie z `CLAUDE.md`). Pojedyncze zamówienia (`/orders`) nadal zablokowane.

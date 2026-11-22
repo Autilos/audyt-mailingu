@@ -199,7 +199,7 @@ footer .tm{font-size:.78rem;color:#ad9c80}
     <h1>Audyt e-mail marketingu sklepu</h1>
     <div class="pod">GetResponse · MailerLite · tylko odczyt</div>
     <p class="lead">Skill robi audyt e-mail marketingu sklepu: czyta Twoje konto przez oficjalne API i mówi wprost, co nie działa: automaty, przez które nikt nie przechodzi, maile bez linku do wypisu, sklep, który nie przesyła zamówień do GetResponse, i maile, które nie liczą sprzedaży. Wynik dostajesz jako raport po polsku: najpierw najważniejsze problemy, potem rekomendacje w kolejności wykonania. Dostajesz dwa pliki: PDF z klikalnymi linkami (potrzebna przeglądarka Chrome, Chromium albo Edge) i Markdown z sekcją „Dla asystenta AI”, który możesz dać swojemu asystentowi AI albo agentowi.</p>
-    <div class="odznaka"><b>Nie pobiera danych osobowych kontaktów ani kupujących</b>: tylko statystyki, ustawienia i treść maili. W MailerLite nie pobiera nawet zamówień, bo API zwraca je razem z danymi kupującego.</div>
+    <div class="odznaka"><b>Nie pobiera danych osobowych kontaktów ani kupujących</b>: tylko statystyki, ustawienia i treść maili. W MailerLite nie pobiera nawet pojedynczych zamówień, bo API zwraca je razem z danymi kupującego — liczbę zamówień i przychód bierze z raportu zbiorczego sklepu.</div>
     <div class="przyciski">
       <a class="btn pelny" href="#instalacja">Jak zainstalować</a>
       <a class="btn pusty" href="https://github.com/Autilos/audyt-mailingu">Kod na GitHubie</a>
@@ -281,7 +281,7 @@ footer .tm{font-size:.78rem;color:#ad9c80}
       <div class="karta"><div class="nr">11</div><h3>Dostarczalność</h3><p>GetResponse: czy domena nadawcy jest potwierdzona i czy są ostrzeżenia DKIM albo DMARC, z osobną uwagą dla adresu w darmowej poczcie.</p></div>
       <div class="karta"><div class="nr">12</div><h3>Przychód przypisany do maili</h3><p>Ile sprzedaży GetResponse przypisuje do maili (zakup po kliknięciu). Ta kwota obejmuje tylko zakupy po kliknięciu w mail, a nie całą sprzedaż sklepu. Jeśli podasz dane sklepu, raport porówna z nimi liczbę zamówień.</p></div>
     </div>
-    <div class="uwaga"><b>W MailerLite dodatkowo:</b> to, co MailerLite sam oznacza w API: automaty zepsute albo niedokończone, maile w automatach bez linku do wypisu i przyciski bez linku. <b>W MailerLite audyt nie czyta zamówień</b> (API zwraca je z danymi kupującego), więc sprzedaż z maili sprawdzisz w panelu.</div>
+    <div class="uwaga"><b>W MailerLite dodatkowo:</b> to, co MailerLite sam oznacza w API: automaty zepsute albo niedokończone, maile w automatach bez linku do wypisu i przyciski bez linku. <b>W MailerLite audyt nie czyta pojedynczych zamówień</b> (API zwraca je z danymi kupującego). Liczbę zamówień, przychód i to, ile z nich dały kampanie, a ile automaty, bierze z raportu zbiorczego sklepu, w którym są same liczby.</div>
   </div>
 </section>
 
@@ -384,7 +384,7 @@ footer .tm{font-size:.78rem;color:#ad9c80}
           <tr><td>GetResponse</td><td><b>Menu → Integracje i API → API → Wygeneruj klucz API</b></td></tr>
           <tr><td>MailerLite</td><td><b>Integracje → MailerLite API → Wygeneruj nowy token</b></td></tr>
         </table></div>
-        <div class="uwaga stop"><b>Klucz traktuj jak hasło.</b> Nie udało się potwierdzić, że GetResponse lub MailerLite oferują klucze tylko do odczytu, więc zakładaj, że klucz daje pełny dostęp do konta. Nigdy nie wklejaj go do czatu z Claude.</div>
+        <div class="uwaga stop"><b>Klucz traktuj jak hasło.</b> GetResponse i MailerLite nie mają kluczy tylko do odczytu, każdy klucz daje pełny dostęp do konta. Dlatego utwórz osobny klucz tylko do audytu i usuń go zaraz po zakończeniu. W MailerLite możesz dodatkowo ograniczyć klucz do adresu IP swojego komputera. Nigdy nie wklejaj go do czatu z Claude.</div>
       </div>
     </div>
 
@@ -486,7 +486,7 @@ python3 skills/audyt-getresponse/scripts/audyt_getresponse.py --dni 90 --raport 
     <h2>Klucz zostaje u Ciebie, konto zostaje nietknięte</h2>
     <div class="siatka dwa">
       <div class="karta"><div class="nr">Tylko odczyt</div><p>Skrypt wysyła wyłącznie zapytania GET. Niczego nie zmienia, nie wysyła maili, nie kasuje kontaktów. Kod jest krótki i jawny, możesz go przeczytać przed uruchomieniem.</p></div>
-      <div class="karta"><div class="nr">Bez danych osobowych</div><p>Skill nie pobiera danych osobowych kontaktów ani kupujących — wyłącznie statystyki, ustawienia i treść maili. W kodzie jest lista dozwolonych zapytań; każde inne przerywa audyt. W GetResponse zamówienia są czytane tylko z polami: numer, kwota, data, status i czy jest przypisany kontakt. W MailerLite zamówień audyt nie czyta wcale.</p></div>
+      <div class="karta"><div class="nr">Bez danych osobowych</div><p>Adresy i dane Twoich subskrybentów oraz kupujących nie trafiają do AI. Audyt czyta wyłącznie statystyki, ustawienia i treść Twoich maili — nigdy listy kontaktów. Z każdej odpowiedzi od razu zostają tylko potrzebne liczby i nazwy, a jeśli w nazwie listy albo temacie maila jest adres e-mail lub telefon, raport go ukrywa. W MailerLite audyt nie czyta pojedynczych zamówień, bo API zwraca je razem z danymi kupującego — liczbę zamówień i przychód bierze z raportu zbiorczego sklepu, w którym są same liczby. Pamiętaj: klucze GetResponse i MailerLite dają pełny dostęp do konta — panele nie mają kluczy tylko do odczytu, a tylko odczyt dotyczy samego skryptu. Dlatego utwórz osobny klucz tylko do audytu (GetResponse: Menu → Integracje i API → API; MailerLite: Integracje → MailerLite API) i usuń go zaraz po zakończeniu.</p></div>
       <div class="karta"><div class="nr">Klucz bez pośrednika</div><p>Skrypt czyta klucz ze zmiennej środowiskowej na Twoim komputerze i wysyła go tylko do oficjalnego API GetResponse albo MailerLite. Inne adresy i przekierowania są odrzucane, a klucz nie trafia do raportu ani do komunikatów o błędach.</p></div>
       <div class="karta"><div class="nr">Wyniki na Twoim dysku</div><p>Raport to plik <code>audyt-*.md</code> w bieżącym katalogu. W Claude Code jego treść trafia do rozmowy, tak jak każdy plik, który Claude czyta.</p></div>
     </div>

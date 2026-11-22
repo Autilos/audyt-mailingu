@@ -1,5 +1,16 @@
 # Zmiany
 
+## 0.3.5 — 2026-11-23
+
+MailerLite: wracają liczba zamówień i przychód — bez danych kupujących.
+
+- Audyt MailerLite czyta raport zbiorczy sklepu (`/ecommerce/shops/{id}/reports/stats`) za okres audytu: ile zamówień i jaki przychód sklep przesłał do MailerLite, średnie zamówienie i ile z tego przypisano do maili, osobno kampanie i automaty. Raport sklepu obejmuje najwyżej 365 dni (limit API) — przy dłuższym okresie raport to zaznacza.
+- Nowy problem w raporcie: „sklep podłączony, ale 0 zamówień w okresie” (tylko włączony sklep zewnętrzny, nie wewnętrzny sklep MailerLite) z rekomendacją „Napraw przesyłanie zamówień ze sklepu”.
+- Prywatność: odpowiedź sprawdzona na żywym koncie — najpierw sama struktura (nazwy pól i typy, bez wartości), w niej żadnych pól o kupujących. Sito przepuszcza z tej odpowiedzi wyłącznie liczby. Pojedynczych zamówień (`/orders`) audyt nadal nie czyta.
+- Tryb pokazowy: zmyślone liczby sklepu z herbatą.
+- Dokumentacja: SKILL.md (nowy sygnał w tabeli), README („Co sprawdza”, „Bezpieczeństwo”), `docs/BEZPIECZENSTWO-przeglad.md`, `docs/CONCEPTS.md`. Testy: `tests/test_v035.py`.
+- Strona (`landing/index.html`): akapit „Bez danych osobowych” i zdanie o kluczach zgodne z README i stroną w WordPressie.
+
 ## 0.3.4 — 2026-11-22
 
 Prywatność „nawet przypadkiem”: zero danych osobowych kontaktów i kupujących, tylko statystyki.
