@@ -6,11 +6,17 @@ Każde hasło znaczy w kodzie, raportach i rozmowie dokładnie to, co tu napisan
 
 **Tylko odczyt** — skrypty wysyłają wyłącznie zapytania GET do oficjalnego API. Niczego nie zmieniają, nie wysyłają maili i nie kasują kontaktów.
 
-**Dane osobowe** — skill nigdy nie pobiera danych kontaktów ani kupujących (e-mail, imię, adres, telefon), tylko statystyki, ustawienia i treść maili. Pilnuje tego lista dozwolonych ścieżek (`DOZWOLONE_SCIEZKI` w obu skryptach): każda inna ścieżka przerywa audyt, a test w `tests/` sprawdza, że w kodzie nie ma zapytań do `/contacts`, `/subscribers`, `/account` ani do zamówień MailerLite.
+**Dane osobowe** — skill nigdy nie pobiera danych kontaktów ani kupujących (e-mail, imię, adres, telefon), tylko statystyki, ustawienia i treść maili. Claude ma zakaz wywoływania API poza skryptem i pokazywania takich danych, także na prośbę użytkownika (sekcja „Zasady dla Claude” w SKILL.md). Przegląd wszystkich dróg wycieku: `docs/BEZPIECZENSTWO-przeglad.md`. Pilnuje tego lista dozwolonych ścieżek (`DOZWOLONE_SCIEZKI` w obu skryptach): każda inna ścieżka przerywa audyt, a test w `tests/` sprawdza, że w kodzie nie ma zapytań do `/contacts`, `/subscribers`, `/account` ani do zamówień MailerLite.
 
 **Lista dozwolonych ścieżek** — jawny spis endpointów, które skrypt może wywołać. W GetResponse zamówienia (`/shops/{id}/orders`) są dozwolone tylko z polami `orderId, totalPrice, processedAt, contactId, status`. Nową ścieżkę dodaje się dopiero po sprawdzeniu na żywym API, że odpowiedź nie zawiera danych osobowych.
 
-**Klucz API** — klucz albo token użytkownika, czytany wyłącznie ze zmiennej środowiskowej i wysyłany tylko do oficjalnego adresu API (przekierowania są odrzucane). Zakładamy, że daje pełny dostęp do konta, więc po audycie użytkownik może go usunąć.
+**Klucz API** — klucz albo token użytkownika, czytany wyłącznie ze zmiennej środowiskowej albo pliku `~/.config/audyt-mailingu/<system>.key` i wysyłany tylko do oficjalnego adresu API (https, właściwy host; przekierowania i linki do innych hostów są odrzucane). Klucze GetResponse i MailerLite dają pełny dostęp do konta (panele nie mają kluczy tylko do odczytu) — „tylko odczyt” dotyczy skryptu. Zalecamy osobny klucz do audytu, usunięty zaraz po nim.
+
+**Sito odpowiedzi** — `WZORY_ODPOWIEDZI` w obu skryptach i `wspolne.przytnij`: z każdej odpowiedzi API od razu po odebraniu zostają wyłącznie pola potrzebne audytowi; reszta (np. adres nadawcy, dane dostępowe sklepu, pola dodane przez dostawcę w przyszłości) jest odrzucana, zanim cokolwiek trafi do pamięci na dysku, raportu albo na ekran. Ścieżka bez wzoru = pusta odpowiedź. Całe odpowiedzi przechodzą tylko przy statystykach (same liczby zbiorcze).
+
+**Maskowanie** — `wspolne.maskuj`: adres e-mail albo numer telefonu wpisany w nazwę listy, automatu, formularza czy temat maila jest zamieniany na „[e-mail ukryty]” / „[telefon ukryty]” już w sicie i jeszcze raz przed zapisem raportu i JSON.
+
+**Treść odpowiedzi z błędem** — przy błędzie API skrypt nie czyta i nie wypisuje treści odpowiedzi (mogłaby zawierać dane), tylko kod błędu i ścieżkę; nie ma też surowych tracebacków z połączeniem.
 
 ## Okno i liczby
 

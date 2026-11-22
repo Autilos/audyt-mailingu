@@ -43,14 +43,20 @@ Zapytaj w Claude Code „jak to naprawić?”, „kto mi to wdroży?” albo „
 
 ## Bezpieczeństwo
 
-- **Tylko odczyt.** Skrypt wysyła wyłącznie zapytania GET — niczego nie zmienia, nie wysyła maili, nie kasuje kontaktów. Kod jest krótki i jawny: [GetResponse](skills/audyt-getresponse/scripts/audyt_getresponse.py), [MailerLite](skills/audyt-mailerlite/scripts/audyt_mailerlite.py).
-- **Bez danych osobowych.** Skill nie pobiera danych osobowych kontaktów ani kupujących — wyłącznie statystyki, ustawienia i treść maili. W kodzie jest lista dozwolonych ścieżek API; każda inna przerywa audyt. W GetResponse zamówienia są czytane tylko z polami: numer, kwota, data, status i informacja, czy zamówienie ma przypisany kontakt (bez danych kupującego). W MailerLite zamówień audyt nie czyta wcale, bo API zwraca je z danymi kupującego.
-- **Klucz zostaje u Ciebie, bez pośrednika.** Skrypt czyta klucz ze zmiennej środowiskowej na Twoim komputerze i wysyła go wyłącznie do oficjalnego API GetResponse albo MailerLite. Inne adresy i przekierowania są odrzucane, a klucz nie trafia do raportu ani do komunikatów o błędach. Jeśli masz ustawione proxy w zmiennych środowiskowych (`HTTPS_PROXY`), połączenie idzie przez nie, nadal szyfrowane.
-- **Wyniki zostają na Twoim dysku.** Raport to plik `audyt-*.md` w bieżącym katalogu. W Claude Code jego treść (nazwy automatów, list, tematy maili, liczby) trafia do rozmowy, tak jak każdy plik, który Claude czyta.
-- **Klucz traktuj jak hasło.** Nie udało się potwierdzić, że GetResponse lub MailerLite oferują klucze tylko do odczytu, więc zakładaj, że klucz daje pełny dostęp do konta. Ten skill go nie wykorzystuje do zmian, ale po audycie klucz usuń:
-  - GetResponse: Menu → Integracje i API → API → usuń klucz,
-  - MailerLite: Integracje → MailerLite API → usuń token.
-- Zgłaszanie problemów z bezpieczeństwem: [SECURITY.md](SECURITY.md).
+**Adresy i dane Twoich subskrybentów oraz kupujących nie trafiają do AI.** Audyt czyta tylko statystyki, ustawienia i treść Twoich maili — nigdy listy kontaktów.
+
+- **Tylko odczyt.** Skrypt wysyła wyłącznie zapytania odczytu — niczego nie zmienia, nie wysyła maili, nie kasuje kontaktów. Kod jest krótki i jawny: [GetResponse](skills/audyt-getresponse/scripts/audyt_getresponse.py), [MailerLite](skills/audyt-mailerlite/scripts/audyt_mailerlite.py).
+- **Bez danych osobowych.** W kodzie jest spis miejsc w API, które skrypt może odczytać; każde inne przerywa audyt. Z każdej odpowiedzi od razu zostają tylko potrzebne liczby i nazwy, a reszta jest odrzucana, zanim cokolwiek trafi na dysk czy do rozmowy. Jeśli w nazwie listy albo temacie maila jest adres e-mail lub numer telefonu, raport go ukrywa.
+- **Zamówienia.** W GetResponse audyt czyta zamówienia tylko z polami: numer, kwota, data, status i informacja, czy zamówienie ma przypisany kontakt — bez danych kupującego. W MailerLite zamówień audyt **nie czyta wcale**: API MailerLite zwraca zamówienie zawsze w całości, razem z danymi kupującego (e-mail, imię, nazwisko, telefon), i nie pozwala wybrać samych pól ([dokumentacja](https://developers.mailerlite.com/ecommerce/orders)).
+- **Claude ma zakazy wpisane w skill.** Nie wywołuje API GetResponse ani MailerLite poza skryptem audytu, nie czyta klucza (np. komendami pokazującymi zmienne środowiskowe czy pliki konfiguracyjne) i nie pobiera kontaktów ani danych kupujących — nawet jeśli go o to poprosisz. Wtedy wyjaśni, że ten audyt tego nie robi, bo dane klientów trafiłyby do modelu AI.
+- **Klucz daje pełny dostęp do konta.** GetResponse i MailerLite nie mają w panelu kluczy „tylko do odczytu” — każdy klucz pozwala na wszystko, co Ty. „Tylko odczyt” dotyczy skryptu audytu, nie klucza. Dlatego:
+  - utwórz **osobny klucz tylko do audytu** (np. nazwij go „audyt”) — GetResponse: Menu → Integracje i API → API; MailerLite: Integracje → MailerLite API → Wygeneruj nowy token (tu możesz też ograniczyć token do swojego adresu IP),
+  - **usuń go zaraz po audycie** w tym samym miejscu, a z komputera usuń plik: `rm ~/.config/audyt-mailingu/*.key`,
+  - nigdy nie wklejaj klucza do czatu.
+- **Klucz idzie tylko do GetResponse albo MailerLite.** Skrypt wysyła go wyłącznie do oficjalnego adresu API, szyfrowanym połączeniem. Inne adresy i przekierowania są odrzucane, a klucz nie trafia do raportu ani do komunikatów o błędach. Jeśli masz ustawione proxy w zmiennych środowiskowych (`HTTPS_PROXY`), połączenie idzie przez nie, nadal szyfrowane.
+- **Wyniki zostają na Twoim dysku.** Raport to plik `audyt-*.md` (i PDF) w bieżącym katalogu. W Claude Code jego treść (nazwy automatów, list, tematy maili, liczby) trafia do rozmowy, tak jak każdy plik, który Claude czyta — dlatego raport nie zawiera danych klientów. PDF powstaje bez pobierania czegokolwiek z internetu.
+- **Czego nie da się wykluczyć technicznie:** klucz z pełnym dostępem leży w zmiennej środowiskowej albo pliku na Twoim komputerze, więc każdy program, który tam uruchomisz (także asystent AI z innymi poleceniami), technicznie mógłby go odczytać. Skill zabrania tego Claude, ale najpewniejszą ochroną jest osobny klucz usunięty zaraz po audycie.
+- Pełny przegląd, co sprawdziliśmy: [docs/BEZPIECZENSTWO-przeglad.md](docs/BEZPIECZENSTWO-przeglad.md). Zgłaszanie problemów: [SECURITY.md](SECURITY.md).
 
 ## Instalacja w Claude Code
 

@@ -3,5 +3,11 @@ audyt*.md
 audyt*.json
 dane*.json
 *.json.tmp
+audyt*.pdf
+audyt*.html
+*.postep.txt
 __pycache__/
+# klucze API nigdy do repozytorium
+*.key
 .env
+.env.*

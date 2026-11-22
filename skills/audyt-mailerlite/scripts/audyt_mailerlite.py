@@ -6,7 +6,8 @@ link do wypisu), kampanie z ostatnich N dni, sklep (zamówienia i przypisanie do
 ustawienia liczenia sprzedaży i listę kontrolną automatów sklepu internetowego.
 
 Nie zmienia niczego na koncie. Wywołuje wyłącznie zapytania GET.
-Nie pobiera adresów e-mail ani danych subskrybentów — tylko liczby zbiorcze.
+Nie pobiera adresów e-mail ani danych subskrybentów i kupujących — tylko liczby zbiorcze. Z każdej odpowiedzi API
+od razu zostają wyłącznie pola potrzebne audytowi (WZORY_ODPOWIEDZI); reszta jest odrzucana, zanim trafi na dysk.
 
 Użycie:
   export MAILERLITE_API_KEY=...        # MailerLite → Integracje → MailerLite API → Wygeneruj nowy token
@@ -30,9 +31,10 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from seria_powitalna import klasyfikuj, wniosek_serii  # noqa: E402
 from rekomendacje import rekomendacja_serii, uloz, sekcja_dla_ai  # noqa: E402
-from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku  # noqa: E402
+from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku, przytnij, maskuj_wszystko  # noqa: E402
 
 API = "https://connect.mailerlite.com/api"
+HOST_API = "connect.mailerlite.com"
 PRZERWA = 0.55  # limit MailerLite: 120 zapytań na minutę
 
 
@@ -56,8 +58,50 @@ DOZWOLONE_SCIEZKI = [re.compile(x) for x in (
 def sciezka_dozwolona(url):
     if not url.startswith(API + "/"):
         return False
-    sciezka = urllib.parse.urlsplit(url).path[len(urllib.parse.urlsplit(API).path):]
+    u = urllib.parse.urlsplit(url)
+    if u.scheme != "https" or u.netloc != HOST_API:
+        return False
+    sciezka = u.path[len(urllib.parse.urlsplit(API).path):]
     return any(r.match(sciezka) for r in DOZWOLONE_SCIEZKI)
+
+
+# Z odpowiedzi zostają WYŁĄCZNIE te pola (wspolne.przytnij) — wszystko inne, np. adresy nadawcy (from, reply_to),
+# dane dostępowe sklepu czy pola, które MailerLite doda w przyszłości, jest odrzucane od razu po odebraniu strony.
+_STAWKA = {"float": True, "string": True}
+_STRONA = {"next": True}
+_STATY_MAILA = {k: _STAWKA for k in ("open_rate", "click_rate", "unsubscribe_rate", "spam_rate", "hard_bounce_rate")}
+_STATY_MAILA["sent"] = True
+_TRESC = {"html": True, "plain": True}
+WZORY_ODPOWIEDZI = [
+    (r"^/groups$", {"data": {k: True for k in ("name", "active_count", "unsubscribed_count", "bounced_count", "junk_count", "unconfirmed_count")},
+                    "links": _STRONA}),
+    (r"^/forms/(popup|embedded|promotion)$", {"data": {"name": True, "active": True, "is_broken": True, "opens_count": True,
+                                                       "conversions_count": True, "conversion_rate": _STAWKA}, "links": _STRONA}),
+    (r"^/ecommerce/settings$", {"data": {"ecommerce_tracking_in_campaigns": True, "ecommerce_tracking_in_automations": True,
+                                         "ecommerce_attribution_window": True}}),
+    (r"^/ecommerce/shops$", {"data": {"name": True, "platform": True, "enabled": True, "internal": True, "currency": True}, "links": _STRONA}),
+    (r"^/automations$", {"data": {
+        "name": True, "enabled": True, "created_at": True, "broken": True, "complete": True,
+        "warnings": {"type": True, "message": True, "code": True},  # napis przechodzi; ze słownika tylko te pola
+        "stats": {"completed_subscribers_count": True, "subscribers_in_queue_count": True, "sent": True,
+                  "click_rate": _STAWKA, "unsubscribe_rate": _STAWKA},
+        "triggers": {"type": True}, "trigger_data": {"track_ecommerce": True},
+        "steps": {"id": True, "parent_id": True, "type": True, "value": True, "unit": True, "delay": {"value": True, "unit": True},
+                  "subject": True, "content": _TRESC, "has_unsubscribe_url": True, "has_unlinked_buttons": True, "broken": True,
+                  "email": {"subject": True, "content": _TRESC, "html": True, "plain_text": True, "stats": _STATY_MAILA}},
+    }, "links": _STRONA}),
+    (r"^/campaigns$", {"data": {"name": True, "finished_at": True, "started_at": True, "scheduled_for": True,
+                                "settings": {"ecommerce_tracking": True},
+                                "emails": {"subject": True, "stats": _STATY_MAILA}}, "links": _STRONA}),
+]
+WZORY_ODPOWIEDZI = [(re.compile(r), w) for r, w in WZORY_ODPOWIEDZI]
+
+
+def przytnij_odpowiedz(url, d):
+    """Odpowiedź API → tylko potrzebne pola. Ścieżka bez wzoru = nic nie zostaje (bezpieczny domyślny wybór)."""
+    sciezka = urllib.parse.urlsplit(url).path[len(urllib.parse.urlsplit(API).path):]
+    wzor = next((w for r, w in WZORY_ODPOWIEDZI if r.match(sciezka)), None)
+    return przytnij(d, wzor) if wzor is not None else None
 
 # Lista kontrolna wg WYZWALACZA automatu (API MailerLite go pokazuje). Wyzwalacze ogólne
 # (formularz, grupa, segment, pole) rozstrzyga nazwa automatu.
@@ -85,13 +129,14 @@ class ML:
         url = sciezka if sciezka.startswith("https://") else API + sciezka
         if params:
             url += ("&" if "?" in url else "?") + urllib.parse.urlencode(params, safe="[]")
-        if not url.startswith(API + "/"):
-            sys.exit(f"Nieoczekiwany adres spoza API MailerLite — przerwano, token nie zostanie wysłany ({url.split('?')[0]}).")
+        u = urllib.parse.urlsplit(url)
+        if not url.startswith(API + "/") or u.scheme != "https" or u.netloc != HOST_API:
+            sys.exit("Nieoczekiwany adres spoza API MailerLite — przerwano, token nie zostanie wysłany.")
         if not sciezka_dozwolona(url):
             sys.exit(f"Ścieżka spoza listy dozwolonych ({url.split('?')[0]}) — przerwano. Audyt nie czyta danych osobowych.")
         z_pamieci = self.pamiec.czytaj(url) if self.pamiec else None
         if z_pamieci is not None:
-            return z_pamieci
+            return przytnij_odpowiedz(url, z_pamieci)  # pamięć ze starszej wersji też przechodzi przez sito
         for proba in range(5):
             time.sleep(PRZERWA)
             self.zapytan += 1
@@ -99,18 +144,21 @@ class ML:
                 r = _OTWIERACZ.open(urllib.request.Request(url, headers=self.h), timeout=120)
                 surowe = r.read() or b"null"
                 try:
-                    d = json.loads(surowe)
-                    if self.pamiec:
-                        self.pamiec.zapisz(url, d)
-                    return d
+                    d = przytnij_odpowiedz(url, json.loads(surowe))
                 except ValueError:
-                    sys.exit(f"API zwróciło odpowiedź, która nie jest JSON-em ({sciezka}).")
+                    sys.exit("API zwróciło odpowiedź, która nie jest JSON-em — przerwano (treści odpowiedzi nie pokazujemy).")
+                finally:
+                    surowe = None  # surowa odpowiedź nie jest nigdzie zapisywana ani wypisywana
+                if self.pamiec:
+                    self.pamiec.zapisz(url, d)
+                return d
             except (socket.timeout, TimeoutError, http.client.IncompleteRead, ConnectionError):
                 if proba < 4:
                     time.sleep(5 * (proba + 1))
                     continue
-                raise
+                sys.exit("Połączenie z API MailerLite zrywa się — przerwano. Uruchom ponownie za kilka minut.")
             except urllib.error.HTTPError as e:
+                e.close()  # treść odpowiedzi z błędem nie jest czytana ani wypisywana (mogłaby zawierać dane)
                 if 300 <= e.code < 400:
                     sys.exit(f"API odpowiedziało przekierowaniem ({e.code}) — przerwano, token nie został wysłany pod inny adres.")
                 if e.code == 429:
@@ -135,8 +183,8 @@ class ML:
                 if proba < 4:
                     time.sleep(3 * (proba + 1))
                     continue
-                raise
-        sys.exit(f"API MailerLite nie odpowiedziało po 5 próbach ({sciezka}) — przerwano, żeby raport nie był oparty na brakujących danych.")
+                sys.exit("Brak połączenia z API MailerLite (sieć, proxy albo zapora) — przerwano.")
+        sys.exit(f"API MailerLite nie odpowiedziało po 5 próbach ({sciezka.split('?')[0]}) — przerwano, żeby raport nie był oparty na brakujących danych.")
 
     def wszystkie(self, sciezka, params=None, max_stron=50):
         wynik, nastepna = [], None
@@ -433,6 +481,7 @@ def main():
     D["niedostepne"] = ml.niedostepne
     D["ostrzezenia"] = ml.ostrzezenia
 
+    D = maskuj_wszystko(D)  # e-mail albo telefon wpisany w nazwę grupy, automatu czy temat → zamaskowany
     with open(a.raport, "w", encoding="utf-8") as plik:
         plik.write(raport(D))
     if a.json:
