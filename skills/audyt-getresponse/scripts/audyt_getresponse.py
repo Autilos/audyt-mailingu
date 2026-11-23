@@ -33,7 +33,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from seria_powitalna import klasyfikuj, wniosek_serii  # noqa: E402
 from rekomendacje import rekomendacja_serii, uloz, sekcja_dla_ai  # noqa: E402
-from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku, przytnij, maskuj_wszystko, CALOSC  # noqa: E402
+from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku, przytnij, maskuj_wszystko, CALOSC, KOD  # noqa: E402
 
 PRZERWA = 0.3  # s między zapytaniami; limit GR to 80/s, ale w praktyce ~4/s bez 429
 MAX_STRON_ZAMOWIEN = 120  # 120 × 500 zamówień — bezpiecznik dla bardzo dużych sklepów
@@ -61,7 +61,7 @@ DOZWOLONE_SCIEZKI = [re.compile(x) for x in (
     r"^/statistics/ecommerce/(performance|revenue)$",
     r"^/forms$", r"^/from-fields$",
 )]
-# Zamówienia: tylko te pola (bez danych kupującego). contactId = sam identyfikator, liczymy tylko, czy jest.
+# Zamówienia: tylko te pola (bez danych kupującego). contactId zamieniamy od razu na „jest / nie ma”.
 POLA_ZAMOWIEN = {"orderId", "totalPrice", "processedAt", "contactId", "status"}
 
 
@@ -81,31 +81,37 @@ def _domena(adres):
 
 
 _TRESC = {"subject": True, "content": {"html": True, "plain": True}}
-# flagi wiadomości (np. ecommerce_tracking) — API podaje je jako listę albo tekst; zostają tylko napisy
-_FLAGI = lambda v: [x for x in v if isinstance(x, str)] if isinstance(v, list) else (v if isinstance(v, str) else None)  # noqa: E731
+# flagi wiadomości (np. ecommerce_tracking) — API podaje je jako listę albo tekst; zostają tylko kody
+_FLAGI = lambda v: [KOD(x) for x in v if isinstance(x, str) and KOD(x)] if isinstance(v, list) else KOD(v)  # noqa: E731
 # Z odpowiedzi zostają WYŁĄCZNIE te pola (wspolne.przytnij). CALOSC tylko przy statystykach (same liczby zbiorcze).
+# Pola słownikowe (status, waluta, daty) przechodzą jako KOD: krótki kod bez spacji — zdanie czy nazwisko odpada.
+# Tekstem swobodnym (True) zostają tylko nazwy i tematy, które właściciel konta sam wpisał.
+_WORKFLOW = {"workflowId": KOD, "name": True, "status": KOD, "dateStart": KOD,
+             "subscriberStatistics": {"completedCount": True, "inProgressCount": True}}
 WZORY_ODPOWIEDZI = [(re.compile(r), w) for r, w in (
-    (r"^/campaigns$", {"campaignId": True, "name": True}),
+    (r"^/campaigns$", {"campaignId": KOD, "name": True}),
     (r"^/campaigns/statistics/(list-size|subscriptions|removals)$", CALOSC),
-    (r"^/workflow$", {"workflowId": True, "name": True, "status": True, "dateStart": True,
-                      "subscriberStatistics": {"completedCount": True, "inProgressCount": True}}),
-    (r"^/workflow/[A-Za-z0-9]+$", {"workflowId": True, "name": True, "status": True, "dateStart": True,
-                                   "subscriberStatistics": {"completedCount": True, "inProgressCount": True}}),
-    (r"^/newsletters$", dict({k: True for k in ("newsletterId", "name", "subject", "status", "createdOn", "sendOn")}, flags=_FLAGI)),
+    (r"^/workflow$", _WORKFLOW),
+    (r"^/workflow/[A-Za-z0-9]+$", _WORKFLOW),
+    (r"^/newsletters$", {"newsletterId": KOD, "name": True, "subject": True, "status": KOD, "createdOn": KOD, "sendOn": KOD,
+                         "flags": _FLAGI}),
     (r"^/newsletters/[A-Za-z0-9]+/statistics$", CALOSC),
     (r"^/newsletters/[A-Za-z0-9]+$", _TRESC),
-    (r"^/autoresponders$", {"autoresponderId": True, "name": True, "subject": True, "status": True, "createdOn": True,
+    (r"^/autoresponders$", {"autoresponderId": KOD, "name": True, "subject": True, "status": KOD, "createdOn": KOD,
                             "flags": _FLAGI,
-                            "campaignId": True, "campaign": {"campaignId": True},
-                            "triggerSettings": {"dayOfCycle": True, "subscribedCampaign": {"campaignId": True}}}),
+                            "campaignId": KOD, "campaign": {"campaignId": KOD},
+                            "triggerSettings": {"dayOfCycle": True, "subscribedCampaign": {"campaignId": KOD}}}),
     (r"^/autoresponders/[A-Za-z0-9]+/statistics$", CALOSC),
     (r"^/autoresponders/[A-Za-z0-9]+$", _TRESC),
-    (r"^/shops$", {"shopId": True, "name": True, "currency": True}),
-    (r"^/shops/[A-Za-z0-9]+/orders$", {k: True for k in POLA_ZAMOWIEN}),
+    (r"^/shops$", {"shopId": KOD, "name": True, "currency": KOD}),
+    # contactId → samo „tak/nie” (czy zamówienie ma przypisany kontakt): identyfikator kupującego nie trafia nawet do pamięci
+    (r"^/shops/[A-Za-z0-9]+/orders$", {"orderId": KOD, "totalPrice": KOD, "processedAt": KOD, "status": KOD,
+                                       "contactId": lambda v: bool(v)}),
     (r"^/statistics/ecommerce/(performance|revenue)$", CALOSC),
-    (r"^/forms$", {k: True for k in ("formId", "name", "status", "visitors", "uniqueVisitors", "subscribed", "subscriptionRate", "createdOn")}),
-    (r"^/from-fields$", {"email": _domena, "isActive": True, "isDefault": True,
-                         "domain": {"status": True, "DKIMWarning": True, "hasDMARCWarning": True}}),
+    (r"^/forms$", {"formId": KOD, "name": True, "status": KOD, "visitors": True, "uniqueVisitors": True, "subscribed": True,
+                   "subscriptionRate": True, "createdOn": KOD}),
+    (r"^/from-fields$", {"email": _domena, "isActive": KOD, "isDefault": KOD,
+                         "domain": {"status": KOD, "DKIMWarning": KOD, "hasDMARCWarning": KOD}}),
 )]
 
 

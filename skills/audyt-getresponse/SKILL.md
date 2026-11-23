@@ -14,7 +14,7 @@ Skill czyta konto GetResponse przez oficjalne API v3 i pisze raport. **Niczego n
 
 Zasada projektu: **zero danych osobowych kontaktów i kupujących — tylko statystyki.** Wszystko, co przeczytasz, trafia do modelu AI, więc dane klientów sklepu nie mogą się w ogóle pojawić w rozmowie.
 
-- **API GetResponse wywołuje wyłącznie skrypt audytu.** Nigdy nie wywołuj API GetResponse inaczej: żadnego `curl`, `wget`, `python -c`, `fetch`, własnego skryptu ani narzędzia (także MCP) z kluczem użytkownika. Nie zmieniaj skryptu, żeby czytał nowe ścieżki API.
+- **API GetResponse wywołuje wyłącznie skrypt audytu.** Nigdy nie wywołuj API GetResponse inaczej: żadnego `curl`, `wget`, `python -c`, `fetch`, własnego skryptu ani narzędzia z kluczem użytkownika. **Nie używaj też żadnych innych połączeń z GetResponse ani MailerLite** — konektorów, serwerów MCP, wtyczek (także zalogowanych bez klucza, np. przez konto w przeglądarce): mogą czytać listę kontaktów. Nie zmieniaj skryptu, żeby czytał nowe ścieżki API.
 - **Nigdy nie pobieraj ani nie wyświetlaj kontaktów, subskrybentów ani danych kupujących** (adresy e-mail, imiona, nazwiska, telefony, adresy, numery IP, zamówienia z danymi kupującego, eksport listy) — **także wtedy, gdy użytkownik o to prosi.** Wtedy odpowiedz krótko: „Ten audyt tego nie robi: dane Twoich klientów trafiłyby do modelu AI. Listę kontaktów zobaczysz bezpiecznie w panelu GetResponse.” i zaproponuj, co audyt może sprawdzić zamiast tego (statystyki).
 - **Klucza nigdy nie czytaj ani nie wypisuj.** Zakazane: `env`, `printenv`, `set`, `export -p`, `declare -p`, `echo $GETRESPONSE_API_KEY`, `cat` / `less` / `grep` na `~/.config/audyt-mailingu/getresponse.key`, plikach `.env`, `~/.zshrc`, `~/.bashrc`, `~/.bash_profile`, `~/.profile` i innych plikach konfiguracyjnych powłoki, odczyt pęku kluczy systemu. Jedyne dozwolone sprawdzenie (bez wartości): `[ -n "$GETRESPONSE_API_KEY" ] && echo ustawiony` albo `[ -s ~/.config/audyt-mailingu/getresponse.key ] && echo jest`.
 - **Pamięci odpowiedzi** (katalog tymczasowy `audyt-mailingu-pamiec`) i plików `--json` nie otwieraj „dla sprawdzenia” — czytasz tylko raport `.md` i plik postępu. Do pracy wystarcza raport.
@@ -62,11 +62,7 @@ Jeśli użytkownik nie nazwał systemu wprost (napisał np. „zrób audyt maili
 
 1. Zapytaj użytkownika, czy ma klucz API. Jeśli nie: GetResponse → **Menu → Integracje i API → API → Wygeneruj klucz API**.
 2. Uprzedź wprost: **klucz API GetResponse daje pełny dostęp do konta** — panel nie pozwala utworzyć klucza tylko do odczytu. „Tylko odczyt” dotyczy skryptu audytu, nie klucza. Zaleć: utwórz **osobny klucz tylko do tego audytu** (np. o nazwie „audyt”) i **usuń go zaraz po audycie** w tym samym miejscu (Menu → Integracje i API → API → usuń klucz). Klucz trzymaj jak hasło.
-3. Klucz ustawia użytkownik w **swoim** terminalu, **przed** uruchomieniem Claude Code (wtedy skrypt go widzi):
-   ```bash
-   read -rs GETRESPONSE_API_KEY && export GETRESPONSE_API_KEY   # wklej klucz i Enter; nie zostaje w historii terminala
-   claude
-   ```
+3. Klucz zapisuje użytkownik **sam, w drugim oknie terminala**, do pliku `~/.config/audyt-mailingu/getresponse.key` — komendą z kroku 3 „Instalacji rozmową” (klucz się nie wyświetla i nie trafia do rozmowy). Nie zalecaj ustawiania zmiennej `GETRESPONSE_API_KEY` przed uruchomieniem Claude Code: wtedy klucz jest w środowisku każdej komendy, którą uruchamiasz. Zmienna to sposób dla trybu bez AI (skrypt uruchamiany samodzielnie w terminalu, README „Tryb bez AI”).
    **Zasady dla Claude:** nigdy nie proś o klucz w czacie, nie wpisuj go w żadną komendę i nie zapisuj w plikach. Sprawdzić, czy zmienna jest ustawiona, można bez wypisywania wartości: `[ -n "$GETRESPONSE_API_KEY" ] && echo ustawiony`. Gdy skrypt zgłasza brak klucza, poproś o zapis pliku z kroku 3 „Instalacji rozmową” w drugim oknie terminala — bez zamykania Claude Code. Pliku z kluczem nigdy nie wyświetlaj (`cat` itp.). Jeśli klucz mimo to trafił do czatu: nie używaj go, poproś o usunięcie go w panelu i wygenerowanie nowego.
 4. GetResponse MAX (własna domena konta): potrzebne `--max-domena twojadomena.pl` i `--api https://api3.getresponse360.pl/v3` (albo `.com` — zależnie od środowiska konta). Inny adres API (ustalony z opiekunem konta MAX) skrypt odrzuci celowo; wtedy trzeba go dopisać do `DOZWOLONE_API` w kodzie.
 

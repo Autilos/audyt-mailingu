@@ -6,21 +6,23 @@ Każde hasło znaczy w kodzie, raportach i rozmowie dokładnie to, co tu napisan
 
 **Tylko odczyt** — skrypty wysyłają wyłącznie zapytania GET do oficjalnego API. Niczego nie zmieniają, nie wysyłają maili i nie kasują kontaktów.
 
-**Dane osobowe** — skill nigdy nie pobiera danych kontaktów ani kupujących (e-mail, imię, adres, telefon), tylko statystyki, ustawienia i treść maili. Claude ma zakaz wywoływania API poza skryptem i pokazywania takich danych, także na prośbę użytkownika (sekcja „Zasady dla Claude” w SKILL.md). Przegląd wszystkich dróg wycieku: `docs/BEZPIECZENSTWO-przeglad.md`. Pilnuje tego lista dozwolonych ścieżek (`DOZWOLONE_SCIEZKI` w obu skryptach): każda inna ścieżka przerywa audyt, a test w `tests/` sprawdza, że w kodzie nie ma zapytań do `/contacts`, `/subscribers`, `/account` ani do zamówień MailerLite.
+**Dane osobowe** — skill nigdy nie pobiera danych kontaktów ani kupujących (e-mail, imię, adres, telefon), tylko statystyki, ustawienia i treść maili. Claude ma zakaz wywoływania API poza skryptem i pokazywania takich danych, także na prośbę użytkownika (sekcja „Zasady dla Claude” w SKILL.md). Przegląd wszystkich dróg wycieku: `docs/BEZPIECZENSTWO-przeglad.md`. Pilnuje tego lista dozwolonych ścieżek (`DOZWOLONE_SCIEZKI` w obu skryptach): każda inna ścieżka przerywa audyt, a test w `tests/` sprawdza, że w kodzie nie ma zapytań do `/contacts`, `/subscribers`, `/account` ani do pojedynczych zamówień MailerLite.
 
-**Lista dozwolonych ścieżek** — jawny spis endpointów, które skrypt może wywołać. W GetResponse zamówienia (`/shops/{id}/orders`) są dozwolone tylko z polami `orderId, totalPrice, processedAt, contactId, status`. Nową ścieżkę dodaje się dopiero po sprawdzeniu na żywym API, że odpowiedź nie zawiera danych osobowych.
+**Lista dozwolonych ścieżek** — jawny spis endpointów, które skrypt może wywołać. W GetResponse zamówienia (`/shops/{id}/orders`) są dozwolone tylko z polami `orderId, totalPrice, processedAt, contactId, status`. W MailerLite pojedynczych zamówień nie ma na liście; dozwolony jest tylko raport zbiorczy sklepu (`/ecommerce/shops/{id}/reports/stats`, same liczby). Nową ścieżkę dodaje się dopiero po sprawdzeniu na żywym API, że odpowiedź nie zawiera danych osobowych.
 
 **Klucz API** — klucz albo token użytkownika, czytany wyłącznie ze zmiennej środowiskowej albo pliku `~/.config/audyt-mailingu/<system>.key` i wysyłany tylko do oficjalnego adresu API (https, właściwy host; przekierowania i linki do innych hostów są odrzucane). Klucze GetResponse i MailerLite dają pełny dostęp do konta (panele nie mają kluczy tylko do odczytu) — „tylko odczyt” dotyczy skryptu. Zalecamy osobny klucz do audytu, usunięty zaraz po nim.
 
-**Sito odpowiedzi** — `WZORY_ODPOWIEDZI` w obu skryptach i `wspolne.przytnij`: z każdej odpowiedzi API od razu po odebraniu zostają wyłącznie pola potrzebne audytowi; reszta (np. adres nadawcy, dane dostępowe sklepu, pola dodane przez dostawcę w przyszłości) jest odrzucana, zanim cokolwiek trafi do pamięci na dysku, raportu albo na ekran. Ścieżka bez wzoru = pusta odpowiedź. Całe odpowiedzi przechodzą tylko przy statystykach (same liczby zbiorcze).
+**Sito odpowiedzi** — `WZORY_ODPOWIEDZI` w obu skryptach i `wspolne.przytnij`: z każdej odpowiedzi API od razu po odebraniu zostają wyłącznie pola potrzebne audytowi; reszta (np. adres nadawcy, dane dostępowe sklepu, pola dodane przez dostawcę w przyszłości) jest odrzucana, zanim cokolwiek trafi do pamięci na dysku, raportu albo na ekran. Ścieżka bez wzoru = pusta odpowiedź. Całe odpowiedzi przechodzą tylko przy statystykach (`CALOSC`), i to wyłącznie liczby oraz krótkie kody (od v0.3.6). W raporcie sklepu MailerLite sito przepuszcza wyłącznie liczby. Tekst swobodny (`True` we wzorze) zostaje tylko w nazwach i tematach wpisanych przez właściciela konta; pola słownikowe (status, waluta, platforma, typ, daty, identyfikatory) przechodzą jako **kod** (`wspolne.KOD`): krótki napis bez spacji — zdanie, nazwisko czy adres odpadają. `contactId` zamówienia GetResponse zamienia się od razu na „jest / nie ma”.
 
-**Maskowanie** — `wspolne.maskuj`: adres e-mail albo numer telefonu wpisany w nazwę listy, automatu, formularza czy temat maila jest zamieniany na „[e-mail ukryty]” / „[telefon ukryty]” już w sicie i jeszcze raz przed zapisem raportu i JSON.
+**Maskowanie** — `wspolne.maskuj`: adres e-mail, numer telefonu albo numer IP wpisany w nazwę listy, automatu, formularza czy temat maila jest zamieniany na „[e-mail ukryty]” / „[telefon ukryty]” / „[IP ukryty]” już w sicie (także wynik funkcji we wzorze i nazwy pól) i jeszcze raz przed zapisem raportu i JSON. Tekst jest najpierw sprowadzany do zwykłych znaków (NFKC). E-mail: też `%40`, `&#64;`, „[at]”, „at … dot”. Telefon: 9–13 cyfr w dowolnym podziale na grupy; daty nie. IP: IPv4 i IPv6.
+
+**Test kanarek** — `tests/test_kanarek.py`: dowód szczelności. Atrapa API dla każdej dozwolonej ścieżki wpisuje w każde pole unikalne zmyślone dane osobowe; pełny audyt i PDF nie mogą ich pokazać nigdzie (ekran, raport, JSON, HTML, PDF, plik postępu, pamięć). Nowa ścieżka w `DOZWOLONE_SCIEZKI` = najpierw atrapa w tym teście (inaczej test nie przejdzie). Imię i nazwisko mogą przejść tylko w polach z `GRANICA_NAZW`.
 
 **Treść odpowiedzi z błędem** — przy błędzie API skrypt nie czyta i nie wypisuje treści odpowiedzi (mogłaby zawierać dane), tylko kod błędu i ścieżkę; nie ma też surowych tracebacków z połączeniem.
 
 ## Okno i liczby
 
-**Okres audytu** — liczba dni wstecz od dnia uruchomienia (`--dni`, domyślnie 90), w którym liczone są newslettery, zamówienia i zdrowie bazy. Wyniki maili z automatów i formularzy obejmują całe ich życie, nie tylko ten okres.
+**Okres audytu** — liczba dni wstecz od dnia uruchomienia (`--dni`, domyślnie 30), w którym liczone są newslettery, zamówienia i zdrowie bazy. Wyniki maili z automatów i formularzy obejmują całe ich życie, nie tylko ten okres.
 
 **Otwarcia bez botów** — tylko w GetResponse: pole `uniqueHumanOpened` (i `uniqueHumanClicked`), z którego GetResponse odsiewa automatyczne otwarcia, np. Apple Mail. MailerLite podaje otwarcia surowe, dlatego tam oceniamy maile po kliknięciach.
 
@@ -44,9 +46,11 @@ Każde hasło znaczy w kodzie, raportach i rozmowie dokładnie to, co tu napisan
 
 **Zamówienie bez kontaktu** — zamówienie w GetResponse bez przypisanego kontaktu (`contactId`). Nie musi być błędem: zwykle to klient bez zgody na maile. W raporcie to „do sprawdzenia” na kilku zamówieniach z zaznaczoną zgodą, a nie wniosek.
 
-**Sklep bez zamówień** — sklep jest podłączony, ale API nie zwraca zamówień z okresu audytu. Jeśli sklep w tym czasie sprzedawał, integracja najpewniej nie przesyła zamówień; potwierdza to dopiero porównanie z danymi sklepu.
+**Sklep bez zamówień** — sklep jest podłączony, ale API nie zwraca zamówień z okresu audytu (w MailerLite: raport zbiorczy sklepu pokazuje 0 zamówień; dotyczy tylko włączonego sklepu zewnętrznego, nie wewnętrznego sklepu MailerLite). Jeśli sklep w tym czasie sprzedawał, integracja najpewniej nie przesyła zamówień; potwierdza to dopiero porównanie z danymi sklepu.
 
 **Przychód z `/statistics/ecommerce/revenue`** — przychód przypisany do maili (zakup po kliknięciu w mail), a nie cały przychód sklepu. Do porównania ze sklepem służy suma zamówień z `/shops/{id}/orders` i opcjonalne `--przychod-sklepu` / `--zamowienia-sklepu`.
+
+**Raport sprzedaży sklepu MailerLite** — `/ecommerce/shops/{id}/reports/stats` za okres audytu (najwyżej 365 dni, limit API): liczba zamówień i przychód, które sklep przesłał do MailerLite, oraz ile z nich przypisano do maili — osobno kampanie i automaty (zakup po kliknięciu w mail, w czasie przypisania z ustawień e-commerce). Brak raportu = „nieznane”, nie „0”.
 
 **Śledzenie e-commerce** — ustawienie w wiadomości (GetResponse) albo ustawienie liczenia sprzedaży (MailerLite). Bez niej sprzedaż z danego maila najpewniej nie jest przypisywana.
 

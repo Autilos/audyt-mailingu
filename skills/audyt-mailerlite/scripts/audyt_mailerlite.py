@@ -2,7 +2,8 @@
 """Audyt e-mail marketingu w MailerLite — TYLKO ODCZYT.
 
 Sprawdza: automatyzacje (wyzwalacz, czy działają, czy są zepsute, każdy mail z wynikami,
-link do wypisu), kampanie z ostatnich N dni, sklep (zamówienia i przypisanie do maili),
+link do wypisu), kampanie z ostatnich N dni, sklep (liczba zamówień i przychód z raportu zbiorczego sklepu,
+w tym część z kampanii i automatów — bez pojedynczych zamówień),
 ustawienia liczenia sprzedaży i listę kontrolną automatów sklepu internetowego.
 
 Nie zmienia niczego na koncie. Wywołuje wyłącznie zapytania GET.
@@ -31,7 +32,7 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from seria_powitalna import klasyfikuj, wniosek_serii  # noqa: E402
 from rekomendacje import rekomendacja_serii, uloz, sekcja_dla_ai  # noqa: E402
-from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku, przytnij, maskuj_wszystko  # noqa: E402
+from wspolne import Postep, Pamiec, klucz_z_env_albo_pliku, przytnij, maskuj_wszystko, KOD  # noqa: E402
 
 API = "https://connect.mailerlite.com/api"
 HOST_API = "connect.mailerlite.com"
@@ -49,10 +50,13 @@ _OTWIERACZ = urllib.request.build_opener(_BezPrzekierowan)
 
 # Zero danych osobowych: wyłącznie te ścieżki (statystyki, ustawienia, treść maili).
 # Celowo brak /subscribers, /ecommerce/shops/{id}/orders (zamówienia mają dane kupującego), /account (adres firmy/właściciela).
+# /ecommerce/shops/{id}/reports/stats = raport zbiorczy sklepu: same liczby (zamówienia, przychód, podział dzienny
+# na kampanie i automaty), sprawdzony na żywym koncie 23.11.2026 — bez danych kupujących.
 DOZWOLONE_SCIEZKI = [re.compile(x) for x in (
     r"^/groups$", r"^/ecommerce/settings$", r"^/ecommerce/shops$", r"^/automations$", r"^/campaigns$",
-    r"^/forms/(popup|embedded|promotion)$",
+    r"^/forms/(popup|embedded|promotion)$", r"^/ecommerce/shops/[0-9]+/reports/stats$",
 )]
+MAKS_DNI_RAPORTU_SKLEPU = 365  # API odrzuca dłuższy okres (sprawdzone: 365 dni działa, 366 — błąd 422)
 
 
 def sciezka_dozwolona(url):
@@ -68,10 +72,27 @@ def sciezka_dozwolona(url):
 # Z odpowiedzi zostają WYŁĄCZNIE te pola (wspolne.przytnij) — wszystko inne, np. adresy nadawcy (from, reply_to),
 # dane dostępowe sklepu czy pola, które MailerLite doda w przyszłości, jest odrzucane od razu po odebraniu strony.
 _STAWKA = {"float": True, "string": True}
-_STRONA = {"next": True}
+_STRONA = {"next": True}  # link do kolejnej strony; sprawdzany: tylko adres API MailerLite
 _STATY_MAILA = {k: _STAWKA for k in ("open_rate", "click_rate", "unsubscribe_rate", "spam_rate", "hard_bounce_rate")}
 _STATY_MAILA["sent"] = True
 _TRESC = {"html": True, "plain": True}
+
+
+def _liczba_albo_nic(v):
+    """Raport sklepu: przechodzi wyłącznie liczba (także zapisana jako tekst, np. "40.00"); cokolwiek innego — nic."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return v
+    if isinstance(v, str):
+        try:
+            return float(v.replace(",", "."))
+        except ValueError:
+            return None
+    return None
+
+
+_ZAMOWIENIA_DZIENNIE = {k: _liczba_albo_nic for k in ("campaign_orders_count", "automation_orders_count", "campaign_revenue", "automation_revenue")}
 WZORY_ODPOWIEDZI = [
     (r"^/groups$", {"data": {k: True for k in ("name", "active_count", "unsubscribed_count", "bounced_count", "junk_count", "unconfirmed_count")},
                     "links": _STRONA}),
@@ -79,18 +100,22 @@ WZORY_ODPOWIEDZI = [
                                                        "conversions_count": True, "conversion_rate": _STAWKA}, "links": _STRONA}),
     (r"^/ecommerce/settings$", {"data": {"ecommerce_tracking_in_campaigns": True, "ecommerce_tracking_in_automations": True,
                                          "ecommerce_attribution_window": True}}),
-    (r"^/ecommerce/shops$", {"data": {"name": True, "platform": True, "enabled": True, "internal": True, "currency": True}, "links": _STRONA}),
+    (r"^/ecommerce/shops$", {"data": {"id": KOD, "name": True, "platform": KOD, "enabled": True, "internal": True, "currency": KOD}, "links": _STRONA}),
+    # Raport zbiorczy sklepu: wyłącznie liczby; data dnia i wszystko inne odpada.
+    (r"^/ecommerce/shops/[0-9]+/reports/stats$", {"data": {
+        "ecommerce": {k: _liczba_albo_nic for k in ("orders_count", "revenue", "average_order_value")},
+        "series": _ZAMOWIENIA_DZIENNIE}}),
     (r"^/automations$", {"data": {
-        "name": True, "enabled": True, "created_at": True, "broken": True, "complete": True,
-        "warnings": {"type": True, "message": True, "code": True},  # napis przechodzi; ze słownika tylko te pola
+        "name": True, "enabled": True, "created_at": KOD, "broken": True, "complete": True,
+        "warnings": {"type": KOD, "message": True, "code": KOD},  # napis przechodzi; ze słownika tylko te pola
         "stats": {"completed_subscribers_count": True, "subscribers_in_queue_count": True, "sent": True,
                   "click_rate": _STAWKA, "unsubscribe_rate": _STAWKA},
-        "triggers": {"type": True}, "trigger_data": {"track_ecommerce": True},
-        "steps": {"id": True, "parent_id": True, "type": True, "value": True, "unit": True, "delay": {"value": True, "unit": True},
+        "triggers": {"type": KOD}, "trigger_data": {"track_ecommerce": True},
+        "steps": {"id": KOD, "parent_id": KOD, "type": KOD, "value": KOD, "unit": KOD, "delay": {"value": KOD, "unit": KOD},
                   "subject": True, "content": _TRESC, "has_unsubscribe_url": True, "has_unlinked_buttons": True, "broken": True,
                   "email": {"subject": True, "content": _TRESC, "html": True, "plain_text": True, "stats": _STATY_MAILA}},
     }, "links": _STRONA}),
-    (r"^/campaigns$", {"data": {"name": True, "finished_at": True, "started_at": True, "scheduled_for": True,
+    (r"^/campaigns$", {"data": {"name": True, "finished_at": KOD, "started_at": KOD, "scheduled_for": KOD,
                                 "settings": {"ecommerce_tracking": True},
                                 "emails": {"subject": True, "stats": _STATY_MAILA}}, "links": _STRONA}),
 ]
@@ -172,8 +197,9 @@ class ML:
                 if e.code == 401:
                     sys.exit("Błąd 401: token API nieprawidłowy albo usunięty (MailerLite → Integracje → MailerLite API).")
                 if e.code in (403, 404):
-                    if sciezka not in self.niedostepne:
-                        self.niedostepne.append(sciezka)
+                    sama = urllib.parse.urlsplit(url).path[len(urllib.parse.urlsplit(API).path):]  # bez ?cursor=…
+                    if sama not in self.niedostepne:
+                        self.niedostepne.append(sama)
                     return None
                 if e.code >= 500 and proba < 4:
                     time.sleep(3 * (proba + 1))
@@ -202,6 +228,30 @@ class ML:
         else:
             self.ostrzezenia.append(f"{sciezka}: pobrano maksymalnie {max_stron * 100} pozycji — reszta pominięta.")
         return wynik
+
+
+def raport_sklepu(ml, id_sklepu, od, do):
+    """Liczby zbiorcze sklepu z /ecommerce/shops/{id}/reports/stats: zamówienia, przychód i część z maili.
+    Pusty słownik = API nie podało raportu (wtedy raport mówi „nieznane”, a nie „0”)."""
+    if not re.fullmatch(r"[0-9]+", str(id_sklepu or "")):
+        return {}
+    d = ml.get(f"/ecommerce/shops/{id_sklepu}/reports/stats", {"start_date": od, "end_date": do})
+    dane = (d or {}).get("data") if isinstance(d, dict) else None
+    if not isinstance(dane, dict) or not isinstance(dane.get("ecommerce"), dict):
+        return {}
+    e = dane["ecommerce"]
+    if e.get("orders_count") is None:
+        return {}
+    seria = [x for x in dane.get("series") or [] if isinstance(x, dict)]
+
+    def suma(klucz):
+        return sum(liczba(x.get(klucz)) for x in seria) if seria else None
+    return {"zamowienia": int(liczba(e.get("orders_count"))), "przychod": liczba(e.get("revenue")),
+            "srednie_zamowienie": None if e.get("average_order_value") is None else liczba(e.get("average_order_value")),
+            "z_kampanii_zamowienia": None if suma("campaign_orders_count") is None else int(suma("campaign_orders_count")),
+            "z_kampanii_przychod": suma("campaign_revenue"),
+            "z_automatow_zamowienia": None if suma("automation_orders_count") is None else int(suma("automation_orders_count")),
+            "z_automatow_przychod": suma("automation_revenue")}
 
 
 def liczba(x):
@@ -379,11 +429,17 @@ def main():
                        "sledzenie_automaty": ust.get("ecommerce_tracking_in_automations"),
                        "okno_przypisania_dni": ust.get("ecommerce_attribution_window")}
     D["sklepy"] = []
+    # Raport sklepu obejmuje najwyżej 365 dni wstecz (limit API); przy dłuższym okresie audytu — ostatnie 365 dni.
+    od_sklep = max(od, (dzis - dt.timedelta(days=MAKS_DNI_RAPORTU_SKLEPU)).isoformat())
+    D["sklep_od"] = od_sklep
     for s in ml.wszystkie("/ecommerce/shops"):
-        # Zamówień NIE pobieramy: API MailerLite zwraca je z danymi kupującego i nie pozwala ograniczyć pól.
-        D["sklepy"].append({"nazwa": czysc(s.get("name")) or "—", "platforma": s.get("platform"), "wlaczony": s.get("enabled"),
-                            "wewnetrzny": bool(s.get("internal")),  # sklep MailerLite zakładany automatycznie
-                            "waluta": s.get("currency")})
+        # Pojedynczych zamówień NIE pobieramy: API MailerLite zwraca je z danymi kupującego i nie pozwala ograniczyć pól.
+        # Bierzemy tylko raport zbiorczy sklepu (same liczby).
+        sklep = {"nazwa": czysc(s.get("name")) or "—", "platforma": s.get("platform"), "wlaczony": s.get("enabled"),
+                 "wewnetrzny": bool(s.get("internal")),  # sklep MailerLite zakładany automatycznie
+                 "waluta": s.get("currency")}
+        sklep.update(raport_sklepu(ml, s.get("id"), od_sklep, dzis.isoformat()))
+        D["sklepy"].append(sklep)
 
     postep("3/5 automatyzacje")
     D["automaty"] = []
@@ -412,7 +468,7 @@ def main():
         for k in x.get("steps") or []:
             if k.get("type") != "email":
                 continue
-            e = k.get("email") or {}
+            e = k.get("email") if isinstance(k.get("email"), dict) else {}
             m = wyniki_maila(e.get("stats"))
             m["temat"] = czysc(k.get("subject") or e.get("subject"))
             m["dzien"] = None if dni_kroku.get(k.get("id")) is None else int(dni_kroku[k.get("id")])
@@ -431,7 +487,7 @@ def main():
                 m["problemy"].append("mail zepsuty")
             maile.append(m)
         D["automaty"].append({"nazwa": czysc(x.get("name")) or "—", "wlaczony": bool(x.get("enabled")), "utworzony": utw,
-                              "wyzwalacze": [t.get("type") for t in x.get("triggers") or []],
+                              "wyzwalacze": [t.get("type") for t in x.get("triggers") or [] if isinstance(t, dict) and t.get("type")],
                               "kategoria": kategoria(x), "zakonczyli": zak, "w_kolejce": kol, "wyslane": wys,
                               "klikniecia_proc": stawka(st, "click_rate"), "wypisy_proc": stawka(st, "unsubscribe_rate"),
                               "uwagi": uwagi, "maile": maile})
@@ -446,7 +502,7 @@ def main():
             continue
         if kiedy < od:
             continue
-        e = (c.get("emails") or [{}])[0]
+        e = next((x for x in c.get("emails") or [] if isinstance(x, dict)), {})
         m = wyniki_maila(e.get("stats"))
         m.update({"temat": czysc(e.get("subject") or c.get("name")), "wyslany": kiedy,
                   "sledzi_sprzedaz": bool((c.get("settings") or {}).get("ecommerce_tracking"))})
@@ -539,6 +595,9 @@ def sekcja_rekomendacji(D):
     sklepy_wl = [s for s in D["sklepy"] if s["wlaczony"] and not s["wewnetrzny"]]
     if not sklepy_wl:
         k["brak_sklepu"] = ""
+    puste = [s["nazwa"] for s in sklepy_wl if s.get("zamowienia") == 0]
+    if puste:
+        k["sklep_bez_zamowien"] = "; ".join(puste[:3])
     zywe = [m for a in D["automaty"] if a["wlaczony"] for m in a["maile"]] + D["kampanie"]
     if any(p.startswith("skargi") for m in zywe for p in m["problemy"]):
         k["skargi_spam"] = ""
@@ -574,6 +633,42 @@ def sekcja_rekomendacji(D):
     return L + [""]
 
 
+def okres_sklepu(D):
+    od = D.get("sklep_od") or D["od"]
+    return f"od {od} do {D['data_audytu']}" + (" (MailerLite podaje raport sklepu najwyżej za 365 dni)" if od != D["od"] else "")
+
+
+def kwota(x, waluta):
+    if x is None:
+        return "—"
+    try:
+        v = float(x)
+    except (TypeError, ValueError):
+        return "—"
+    t = f"{v:,.2f}".replace(",", " ").replace(".", ",")
+    if t.endswith(",00"):
+        t = t[:-3]
+    return f"{t} {waluta or ''}".strip()
+
+
+def linie_sklepu(s, D):
+    if s.get("zamowienia") is None:
+        return [f"- Raport sprzedaży sklepu: API go nie podało (funkcja może nie wchodzić w plan) — liczby zamówień i przychodu sprawdź w panelu: E-commerce."]
+    w = s.get("waluta")
+    n = s["zamowienia"]
+    L = [f"- Zamówienia przesłane do MailerLite ({okres_sklepu(D)}): **{zl(n)}**, przychód: **{kwota(s.get('przychod'), w)}**"
+         + (f", średnie zamówienie: {kwota(s.get('srednie_zamowienie'), w)}" if n and s.get("srednie_zamowienie") is not None else "") + "."]
+    zk, za = s.get("z_kampanii_zamowienia"), s.get("z_automatow_zamowienia")
+    if zk is not None or za is not None:
+        zm = (zk or 0) + (za or 0)
+        okno = (D.get("ustawienia") or {}).get("okno_przypisania_dni")
+        L.append(f"- Przypisane do maili (zakup po kliknięciu w mail" + (f", do {okno} dni po kliknięciu" if okno else "") + f"): **{zl(zm)}** {odm(zm, 'zamówienie', 'zamówienia', 'zamówień')} na {kwota((s.get('z_kampanii_przychod') or 0) + (s.get('z_automatow_przychod') or 0), w)} — "
+                 f"z kampanii {zl(zk or 0)} ({kwota(s.get('z_kampanii_przychod') or 0, w)}), z automatów {zl(za or 0)} ({kwota(s.get('z_automatow_przychod') or 0, w)}).")
+    if n == 0 and not s["wewnetrzny"] and s["wlaczony"]:
+        L.append("- Zero zamówień przy podłączonym sklepie: jeśli sklep w tym czasie sprzedawał, integracja najpewniej nie przesyła zamówień. Zrób zamówienie testowe i sprawdź, czy pojawi się w MailerLite (E-commerce → zamówienia).")
+    return L
+
+
 def raport(D):
     L = [f"# Audyt e-mail marketingu — MailerLite ({D['data_audytu']})", ""]
     if D.get("pokaz"):
@@ -597,6 +692,10 @@ def raport(D):
     if not sklepy_wl:
         naj.append("API nie pokazuje żadnego podłączonego zewnętrznego sklepu — porzucony koszyk, przypomnienie o ponownym zakupie i liczenie sprzedaży z maili nie mają danych. "
                    "Jeśli masz sklep (np. WooCommerce, Shopify), podłącz go w MailerLite: Integracje → e-commerce.")
+    for s in sklepy_wl:
+        if s.get("zamowienia") == 0:
+            naj.append(f"Sklep „{s['nazwa']}” jest podłączony, ale MailerLite nie ma z niego żadnego zamówienia w okresie {okres_sklepu(D)}. "
+                       "Jeśli sklep w tym czasie sprzedawał, integracja najpewniej nie przesyła zamówień — a bez nich nie działają porzucony koszyk, maile po zakupie i liczenie przychodu z maili.")
     u = D["ustawienia"]
     if sklepy_wl and u.get("sledzenie_kampanie") is False:
         naj.append("Nowe kampanie mają domyślnie wyłączone liczenie sprzedaży — nie wiesz, ile zarabia każdy newsletter. Włącz w ustawieniach e-commerce.")
@@ -674,14 +773,15 @@ def raport(D):
           f"- Liczenie sprzedaży w nowych kampaniach: **{tn(u.get('sledzenie_kampanie'))}**, w nowych automatach: **{tn(u.get('sledzenie_automaty'))}**, czas przypisania sprzedaży: {u.get('okno_przypisania_dni') or '—'} dni po kliknięciu."]
     for s in D["sklepy"]:
         L.append(f"- Sklep „{s['nazwa']}” ({'wewnętrzny sklep MailerLite' if s['wewnetrzny'] else s['platforma']}, {'włączony' if s['wlaczony'] else 'wyłączony'}).")
+        L += linie_sklepu(s, D)
     if D["sklepy"]:
-        L.append("- **Zamówień audyt nie pobiera**: API MailerLite zwraca je razem z danymi kupującego (e-mail, imię) i nie pozwala ograniczyć pól, a ten audyt nie czyta danych osobowych. "
-                 "Bez zamówień nie sprawdzimy, czy sklep przesyła sprzedaż i ile przychodu przypisano do maili — zobacz w panelu MailerLite: E-commerce → zamówienia oraz raporty kampanii i automatów (kolumna przychodu).")
+        L.append("- Liczby pochodzą z raportu zbiorczego sklepu w MailerLite. **Pojedynczych zamówień audyt nie pobiera**: API MailerLite zwraca je razem z danymi kupującego (e-mail, imię) i nie pozwala ograniczyć pól, a ten audyt nie czyta danych osobowych. "
+                 "Przychód przypisany do maili to sprzedaż po kliknięciu w mail, a nie cały przychód sklepu. Przychód z poszczególnych kampanii i automatów zobaczysz w panelu: raporty kampanii i automatów (kolumna przychodu).")
     if not D["sklepy"]:
         L.append("- Brak podłączonego sklepu.")
     L += ["", "## Czego ten audyt nie widzi", "",
           "- Czy oferta w mailach ma sens — treść maili służy tylko do podziału serii powitalnej na sprzedażowe i wartościowe.",
-          "- Zamówień i przychodu z maili (API zwraca zamówienia z danymi kupującego — nie pobieramy).",
+          "- Pojedynczych zamówień i przychodu z poszczególnych kampanii czy automatów — widzimy tylko liczby zbiorcze sklepu (API zwraca zamówienia z danymi kupującego, więc ich nie pobieramy).",
           "- Statusu domeny nadawcy i przyrostu bazy w czasie.",
           "- Progi w kolumnie „Problemy” (wypisy > 0,5%, kliknięcia < 0,5%, odbicia > 2%, ocena od 200 wysłanych) to orientacyjne granice z praktyki. Skargi: Google wymaga poniżej 0,3% i zaleca poniżej 0,1%.", ""]
     if D.get("niedostepne"):
@@ -689,7 +789,7 @@ def raport(D):
     if D.get("ostrzezenia"):
         L += ["**Ostrzeżenia:**", ""] + [f"- {x}" for x in D["ostrzezenia"]] + [""]
     L += [f"_Zapytań do API: {D['zapytan_api']}._", ""]
-    L += sekcja_dla_ai(D.get("_najwazniejsze") or [], D.get("_rekomendacje") or [], ["Zamówień i przychodu z maili (API zwraca zamówienia z danymi kupującego — nie pobieramy).", "Statusu domeny nadawcy i przyrostu bazy w czasie.", "Czy oferta w mailach ma sens — treść maili służy tylko do podziału serii powitalnej."])
+    L += sekcja_dla_ai(D.get("_najwazniejsze") or [], D.get("_rekomendacje") or [], ["Pojedynczych zamówień i przychodu z poszczególnych kampanii i automatów (widzimy tylko liczby zbiorcze sklepu).", "Statusu domeny nadawcy i przyrostu bazy w czasie.", "Czy oferta w mailach ma sens — treść maili służy tylko do podziału serii powitalnej."])
     L += ["---", "", STOPKA_RAPORTU, "", STOPKA_GWIAZDKA, ""]
     return "\n".join(L)
 

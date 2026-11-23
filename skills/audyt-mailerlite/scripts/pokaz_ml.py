@@ -1,7 +1,7 @@
 """Tryb pokazowy: zmyślone odpowiedzi API MailerLite dla fikcyjnego sklepu z herbatą.
 
 Bez tokena i bez internetu. Pokazuje: serię powitalną z samych rabatów (dzień 0 i 2), brak porzuconego koszyka,
-mail bez linku do wypisu, automat niedokończony, kampanie bez liczenia sprzedaży, formularz z niską konwersją.
+mail bez linku do wypisu, automat niedokończony, kampanie bez liczenia sprzedaży, formularz z niską konwersją, liczby sklepu (zamówienia, przychód, część z maili).
 """
 import datetime as dt
 
@@ -79,6 +79,12 @@ class PokazML:
 
     def get(self, sciezka, params=None):
         self.zapytan += 1
+        if sciezka == "/ecommerce/shops/1/reports/stats":
+            # Zmyślone liczby zbiorcze sklepu z herbatą: zamówienia, przychód i część z kampanii i automatów.
+            seria = [{"date": _dzien(d)[:10], "campaign_orders_count": zk, "campaign_revenue": pk,
+                      "automation_orders_count": za, "automation_revenue": pa}
+                     for d, zk, pk, za, pa in ((22, 9, 1170.0, 12, 1530.5), (14, 7, 905.0, 11, 1402.0), (6, 5, 655.0, 11, 1477.5))]
+            return {"data": {"ecommerce": {"orders_count": 148, "revenue": 18640.0, "average_order_value": 125.95}, "series": seria}}
         if sciezka == "/ecommerce/settings":
             return {"data": {"ecommerce_tracking_in_campaigns": False, "ecommerce_tracking_in_automations": True,
                              "ecommerce_attribution_window": 5}}

@@ -99,6 +99,10 @@ class MailerLiteSzczelnosc(unittest.TestCase):
         elif s == "/ecommerce/shops":
             d = {"data": [{"id": "1", "name": "Herbaciarnia", "platform": "woocommerce", "enabled": True,
                            "internal": False, "currency": "PLN", "orders": [ZAMOWIENIE_ML]}]}
+        elif s == "/ecommerce/shops/1/reports/stats":
+            d = {"data": {"ecommerce": {"orders_count": 4, "revenue": 40, "average_order_value": 10},
+                          "series": [{"date": "2026-11-01", "campaign_orders_count": 1, "automation_orders_count": 1,
+                                      "campaign_revenue": 10, "automation_revenue": 10}]}}
         elif s == "/automations":
             d = {"data": [{"name": "Powitanie", "enabled": True, "complete": True, "created_at": "2025-01-01 10:00:00",
                            "triggers": [{"type": "subscriber_joins_group", "groups": [{"name": IMIE}]}],

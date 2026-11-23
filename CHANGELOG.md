@@ -1,5 +1,31 @@
 # Zmiany
 
+## 0.3.6 — 2026-11-23
+
+Dowód, że dane klientów nie trafiają do AI — i tryb bez AI na wierzchu.
+
+- **Test „kanarek”** (`python3 tests/test_kanarek.py -v`, bez klucza i internetu): atrapa API dla każdej dozwolonej ścieżki GetResponse i MailerLite wpisuje w każde pole odpowiedzi zmyślone dane osobowe (e-mail, telefon, IP, imię i nazwisko, adres — w różnych zapisach), także w pola nieużywane. Pełny audyt i PDF: żaden e-mail, telefon ani IP nie pojawia się na ekranie, w raporcie, JSON, HTML, PDF, pliku postępu, pamięci na dysku ani w adresach zapytań. Imię i nazwisko — tylko w nazwach i tematach wpisanych przez właściciela konta (wypisane na końcu testu).
+- **Niezależny przegląd** (osobny agent bez kontekstu projektu, tylko kod i SKILL.md): 14 znalezisk, 12 prawdziwych i załatanych albo opisanych, 2 fałszywe — tabela w `docs/BEZPIECZENSTWO-przeglad.md`, sekcja 5.
+- Ukrywanie: także numery IP (IPv4, IPv6); telefony w dowolnym podziale na grupy, z nawiasami i numerem kraju; e-maile z „＠”, `%40`, `&#64;`, „[at]”, „at … dot”; także nazwy pól i wynik funkcji w sicie.
+- Sito: statystyki przepuszczają tylko liczby i krótkie kody (wcześniej całe); pola słownikowe (status, waluta, platforma, typ, daty) tylko jako kod bez spacji; `contactId` zamówień GetResponse od razu jako „jest / nie ma”.
+- Pamięć odpowiedzi: przeterminowane (starsze niż 12 h) usuwane przy każdym uruchomieniu, także z `--bez-pamieci`; sprawdzany właściciel obu katalogów.
+- Klucz z niedozwolonym znakiem (nowa linia, spacja) — jedno zdanie po polsku zamiast błędu biblioteki z kluczem w treści.
+- SKILL.md: zakaz każdego innego połączenia z GetResponse i MailerLite (konektory, MCP, wtyczki — także bez klucza); klucz zapisuje użytkownik do pliku w drugim terminalu, zmienna środowiskowa tylko w trybie bez AI.
+- PDF: gdy Chrome zapisze plik, ale zakończy się kodem błędu (np. w czystym środowisku), skrypt nie zgłasza już porażki.
+- README: „Tryb bez AI” (zamiast „Bez Claude Code”) z PDF, zdanie z odnośnikiem na górze „Bezpieczeństwa”, „Jak samemu sprawdzić”. Nowe: `docs/FAQ-bezpieczenstwo.md`. `SECURITY.md`: jak zgłosić problem (prywatne zgłoszenie na GitHubie albo formularz), bez obiecywania terminów.
+- Testy: `tests/test_kanarek.py`, `tests/test_v036.py`.
+
+## 0.3.5 — 2026-11-23
+
+MailerLite: wracają liczba zamówień i przychód — bez danych kupujących.
+
+- Audyt MailerLite czyta raport zbiorczy sklepu (`/ecommerce/shops/{id}/reports/stats`) za okres audytu: ile zamówień i jaki przychód sklep przesłał do MailerLite, średnie zamówienie i ile z tego przypisano do maili, osobno kampanie i automaty. Raport sklepu obejmuje najwyżej 365 dni (limit API) — przy dłuższym okresie raport to zaznacza.
+- Nowy problem w raporcie: „sklep podłączony, ale 0 zamówień w okresie” (tylko włączony sklep zewnętrzny, nie wewnętrzny sklep MailerLite) z rekomendacją „Napraw przesyłanie zamówień ze sklepu”.
+- Prywatność: odpowiedź sprawdzona na żywym koncie — najpierw sama struktura (nazwy pól i typy, bez wartości), w niej żadnych pól o kupujących. Sito przepuszcza z tej odpowiedzi wyłącznie liczby. Pojedynczych zamówień (`/orders`) audyt nadal nie czyta.
+- Tryb pokazowy: zmyślone liczby sklepu z herbatą.
+- Dokumentacja: SKILL.md (nowy sygnał w tabeli), README („Co sprawdza”, „Bezpieczeństwo”), `docs/BEZPIECZENSTWO-przeglad.md`, `docs/CONCEPTS.md`. Testy: `tests/test_v035.py`.
+- Strona (`landing/index.html`): akapit „Bez danych osobowych” i zdanie o kluczach zgodne z README i stroną w WordPressie.
+
 ## 0.3.4 — 2026-11-22
 
 Prywatność „nawet przypadkiem”: zero danych osobowych kontaktów i kupujących, tylko statystyki.
