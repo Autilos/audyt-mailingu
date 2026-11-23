@@ -1,5 +1,13 @@
 # Zmiany
 
+## 0.3.7 — 2026-11-23
+
+Tylko dokumentacja — angielskie README przed zgłoszeniem do listy awesome-claude-code. Kod i raport bez zmian.
+
+- Nowe: `README.en.md` (pełne tłumaczenie README) i `docs/FAQ-security.en.md` (tłumaczenie FAQ o bezpieczeństwie). Raport nadal jest po polsku — celowo, dla polskich sklepów; angielskiej wersji raportu na razie nie planujemy.
+- `README.md` i `docs/FAQ-bezpieczenstwo.md`: na górze odnośnik do wersji angielskiej (i odwrotnie).
+- `docs/awesome-claude-code-zgloszenie.md`: wymagania listy awesome-claude-code i gotowy tekst zgłoszenia (do wysłania ręcznie przez formularz na GitHubie).
+
 ## 0.3.6 — 2026-11-23
 
 Dowód, że dane klientów nie trafiają do AI — i tryb bez AI na wierzchu.

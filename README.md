@@ -1,5 +1,7 @@
 # Audyt e-mail marketingu dla sklepów internetowych
 
+English: [README.en.md](README.en.md)
+
 [![Gwiazdki na GitHubie](https://img.shields.io/github/stars/Autilos/audyt-mailingu?style=social)](https://github.com/Autilos/audyt-mailingu/stargazers)
 
 Skill do Claude Code, który w kilka minut sprawdza e-mail marketing Twojego sklepu i mówi wprost, co nie działa.
