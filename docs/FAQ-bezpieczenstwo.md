@@ -1,5 +1,7 @@
 # Bezpieczeństwo — najczęstsze pytania
 
+English: [FAQ-security.en.md](FAQ-security.en.md)
+
 Krótko i bez technicznego żargonu: co audyt robi z Twoim kontem GetResponse albo MailerLite, co widzi asystent AI (Claude) i jak to sprawdzić samemu.
 
 ## Czy moje kontakty trafiają do AI albo do Anthropic?
