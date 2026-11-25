@@ -31,6 +31,10 @@ Dlatego zalecamy:
 - **usuń go zaraz po audycie** w tym samym miejscu panelu,
 - nigdy nie wklejaj klucza do czatu.
 
+W GetResponse najbezpieczniej jest utworzyć w panelu osobnego użytkownika z ograniczonym dostępem ([zarządzanie zespołem](https://www.getresponse.pl/pomoc/zarzadzanie-zespolem)) i wygenerować klucz z jego konta. Taki klucz ma te same uprawnienia co ten użytkownik — nie więcej. Daj mu dostęp do tego, co audyt ma sprawdzić (listy, newslettery, automatyzacje): czego ten użytkownik nie widzi, tego audyt też nie zobaczy. Po audycie usuń klucz.
+
+GetResponse nie oferuje kluczy tylko do odczytu i nie planuje ich wprowadzać. Skrypt audytu i tak wysyła wyłącznie zapytania odczytu (GET). GetResponse potwierdził też (odpowiedź działu pomocy z 25.11.2026), że sposób, w jaki narzędzie korzysta z API, jest zgodny z ich zasadami korzystania z API.
+
 W MailerLite możesz dodatkowo ograniczyć token do swojego adresu IP.
 
 ## Co jeśli AI zrobi coś innego niż skrypt?

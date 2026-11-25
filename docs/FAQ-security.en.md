@@ -31,6 +31,10 @@ That's why we recommend:
 - **delete it right after the audit** in the same place in the panel,
 - never paste the key into the chat.
 
+In GetResponse, the safest option is to create a separate user with limited access in the panel ([team management](https://www.getresponse.pl/pomoc/zarzadzanie-zespolem), Polish help page) and generate the key from that user's account. Such a key has the same permissions as that user — no more. Give the user access to what the audit should check (lists, newsletters, automations): whatever this user can't see, the audit won't see either. Delete the key after the audit.
+
+GetResponse does not offer read-only keys and does not plan to. The audit script sends only read requests (GET) anyway. GetResponse also confirmed (support reply of 25 November 2026) that the way the tool uses the API complies with their API rules.
+
 In MailerLite you can also restrict the token to your IP address.
 
 ## What if the AI does something other than the script?
