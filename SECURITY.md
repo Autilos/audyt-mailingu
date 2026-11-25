@@ -9,7 +9,7 @@ Najczęstsze pytania prostym językiem: [docs/FAQ-bezpieczenstwo.md](docs/FAQ-be
 - Nie pobiera adresów e-mail ani danych subskrybentów i kupujących. Z każdej odpowiedzi API od razu zostają tylko pola potrzebne audytowi, a adresy e-mail, telefony i numery IP w nazwach list czy tematach są ukrywane. Nie ma telemetrii ani zależności spoza biblioteki standardowej Pythona.
 - Przy błędzie API nie wypisuje treści odpowiedzi. PDF powstaje bez pobierania czegokolwiek z sieci.
 - Nie zapisuje klucza nigdzie. Raport zostaje lokalnie w pliku `audyt-*.md`.
-- Klucze GetResponse i MailerLite dają pełny dostęp do konta (panele nie mają kluczy tylko do odczytu) — używaj osobnego klucza do audytu i usuń go zaraz po nim.
+- Klucze GetResponse i MailerLite dają pełny dostęp do konta (panele nie mają kluczy tylko do odczytu) — używaj osobnego klucza do audytu i usuń go zaraz po nim. W GetResponse najbezpieczniej wygenerować klucz z konta osobnego użytkownika z ograniczonym dostępem ([zarządzanie zespołem](https://www.getresponse.pl/pomoc/zarzadzanie-zespolem)) — taki klucz ma tylko jego uprawnienia. GetResponse nie oferuje kluczy tylko do odczytu; skrypt i tak wysyła wyłącznie zapytania odczytu (GET).
 - Dowód, który możesz uruchomić sam: `python3 tests/test_kanarek.py -v` (opis w [README](README.md#jak-samemu-sprawdzić)).
 - Przegląd wszystkich dróg wycieku: [docs/BEZPIECZENSTWO-przeglad.md](docs/BEZPIECZENSTWO-przeglad.md).
 

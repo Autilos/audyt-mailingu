@@ -1,5 +1,12 @@
 # Zmiany
 
+## 0.3.8 — 2026-11-25
+
+Tylko dokumentacja — zalecenie GetResponse dotyczące klucza API. Kod i raport bez zmian.
+
+- README (PL i EN), `docs/FAQ-bezpieczenstwo.md`, `docs/FAQ-security.en.md`, `SECURITY.md`, `docs/BEZPIECZENSTWO-przeglad.md`, `docs/CONCEPTS.md`, `skills/audyt-getresponse/SKILL.md`: w GetResponse najbezpieczniej wygenerować klucz z konta osobnego użytkownika z ograniczonym dostępem ([zarządzanie zespołem](https://www.getresponse.pl/pomoc/zarzadzanie-zespolem)) — taki klucz ma tylko uprawnienia tego użytkownika. Rada „osobny klucz na czas audytu, usunięty po nim” zostaje.
+- Wprost: GetResponse nie oferuje kluczy tylko do odczytu; skrypt i tak wysyła wyłącznie zapytania odczytu (GET). GetResponse potwierdził (odpowiedź działu pomocy z 25.11.2026), że sposób korzystania z API przez narzędzie jest zgodny z ich zasadami korzystania z API.
+
 ## 0.3.7 — 2026-11-23
 
 Tylko dokumentacja — angielskie README przed zgłoszeniem do listy awesome-claude-code. Kod i raport bez zmian.
