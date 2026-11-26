@@ -65,3 +65,16 @@ Każde hasło znaczy w kodzie, raportach i rozmowie dokładnie to, co tu napisan
 **Rekomendacja** — konkretna rada tylko do wykrytego problemu, ułożona w kolejności: dane, dostarczalność, automaty (`rekomendacje.py`). Bez obietnic wzrostu w procentach i bez czasu wdrożenia; gdy seria powitalna jest dobra, raport mówi, że jest dobra.
 
 **Pewne / do sprawdzenia** — pewne jest to, co API podaje wprost albo co potwierdza niezależne źródło (np. dane sklepu). „Do sprawdzenia” to interpretacja, której API nie rozstrzyga (przyczyna braku kontaktu, klasyfikacja maili, brak automatu „nie znaleziono po nazwie”).
+
+## Porównywarka newsletterów (strona /porownywarka-newsletterow/)
+
+**Zwykły newsletter** — mail ze skrzynki obserwacyjnej, który nie jest potwierdzeniem zapisu, powitaniem ani przypomnieniem kodu powitalnego. Tylko z takich maili liczymy częstotliwość, dni, godziny, udział sprzedaży i słowa w tematach — maile startowe przychodzą wszystkie w dniu zapisu i zafałszowałyby rozkład.
+
+**Newsletterów tygodniowo** — zwykłe newslettery sklepu podzielone przez liczbę dni obserwacji (od zapisu do końca danych) razy 7; tylko sklepy obserwowane co najmniej 7 dni. „Typowy sklep” na stronie = mediana.
+
+**Tabela porównawcza** — cztery liczby na branżę: maili w tygodniu (typowy sklep), ile to oferty i rabaty (%), ile sklepów prosi o potwierdzenie zapisu, ile sklepów z mailem powitalnym daje w nim rabat. Wiersz „Wszystkie sklepy” to punkt odniesienia. Kolorem najwyższa i najniższa wartość w kolumnie, porównana po zaokrągleniu (remisy razem); bez branż z małą liczbą maili i bez „x z y” przy y < 3. Na stronie liczby pełne, poniżej 2 z jednym miejscem po przecinku.
+
+**Wnioski branży** — trzy zdania porównujące branżę z wszystkimi sklepami (rzadziej/częściej: poniżej 0,75 albo powyżej 1,33 typowej wartości ogółu; oferty: różnica ponad 5 punktów procentowych). Nie wprowadzają nowych liczb — wszystko jest w tabeli.
+
+**Wynik porównania** — mail z liczbami newslettera zgłoszonego sklepu na tle branży, wysyłany ręcznie przez Wojtka po około 14 dniach obserwacji. Formularz nie wysyła nic automatycznie do zgłaszającego.
+
