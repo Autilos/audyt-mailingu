@@ -17,7 +17,7 @@ Strona `/porownywarka-newsletterow/` na marketingkrokpokroku.pl: jak często, ki
 porownywarka/odswiez.sh   # zmienne z ~/.config/mkpk-porownywarka.env albo MKPK_SSH=… MKPK_WP=…
 ```
 
-Do automatu raz dziennie. Kod wyjścia ≠ 0 = coś nie przeszło (2: strona nie zwraca 200, 3: na stronie nie ma nowych liczb) — wtedy historia się nie zmienia. W katalogu danych: `porownywarka-pomiary.json` (historia podwójnego potwierdzenia) i `porownywarka-odswiezenia.log` (linijka na każde udane odświeżenie). Strona pokazuje datę ostatniej aktualizacji z pliku. Zmiana szablonu (`wp/*.twig`) nie idzie tym skryptem — wgrywa się ją osobno.
+Do automatu raz dziennie. Kod wyjścia ≠ 0 = coś nie przeszło (2: strona nie zwraca 200, 3: na stronie nie ma nowych liczb, 4: nie udało się wyczyścić cache) — wtedy historia się nie zmienia. W katalogu danych: `porownywarka-pomiary.json` (historia podwójnego potwierdzenia) i `porownywarka-odswiezenia.log` (linijka na każde udane odświeżenie). Strona pokazuje datę ostatniej aktualizacji z pliku. Zmiana szablonu (`wp/*.twig`) nie idzie tym skryptem — wgrywa się ją osobno.
 
 ## Jak liczymy
 

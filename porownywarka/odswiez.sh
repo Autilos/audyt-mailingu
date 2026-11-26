@@ -30,12 +30,16 @@ CEL="$MKPK_WP/wp-content/uploads/mkpk-porownywarka"
 "${SSH[@]}" "mkdir -p '$CEL'"
 scp -q -o BatchMode=yes -o ConnectTimeout=20 "$TMP/dane.json" "$MKPK_SSH:$CEL/dane.json.nowy"
 # Podmiana dopiero po sprawdzeniu, że plik na serwerze jest poprawnym JSON-em z branżami.
-"${SSH[@]}" "php -r '\$d=json_decode(file_get_contents(\"$CEL/dane.json.nowy\"),true); exit(is_array(\$d)&&!empty(\$d[\"branze\"])?0:1);' && mv '$CEL/dane.json.nowy' '$CEL/dane.json' && chown --reference='$MKPK_WP/wp-content/uploads' '$CEL/dane.json' && cd '$MKPK_WP' && (wp --allow-root rocket clean --confirm >/dev/null 2>&1 || true)"
+"${SSH[@]}" "php -r '\$d=json_decode(file_get_contents(\"$CEL/dane.json.nowy\"),true); exit(is_array(\$d)&&!empty(\$d[\"branze\"])?0:1);' && mv '$CEL/dane.json.nowy' '$CEL/dane.json' && chown --reference='$MKPK_WP/wp-content/uploads' '$CEL/dane.json' "
+# Cache WP Rocket tej strony (wp-cli nie ma komendy „rocket” — czyścimy funkcją wtyczki). Brak funkcji = błąd.
+WYCZYSZCZONO=$("${SSH[@]}" "cd '$MKPK_WP' && wp --allow-root eval 'if (!function_exists(\"rocket_clean_post\")) { echo \"brak\"; return; } \$id = url_to_postid(\"$URL\"); if (!\$id) { echo \"brak-strony\"; return; } rocket_clean_post(\$id); echo \"ok\";' 2>/dev/null" || true)
+case "$WYCZYSZCZONO" in *ok) ;; *) echo "BŁĄD: nie wyczyściłem cache strony ($WYCZYSZCZONO)" >&2; exit 4 ;; esac
 
 # Sprawdzenie żywej strony bez logowania: 200 i „x z y” podwójnego potwierdzenia z właśnie wgranego pliku.
 OCZEKIWANE=$(python3 -I -c 'import json,sys; p=json.load(open(sys.argv[1]))["podwojne"]; print("%d%%|%d z %d" % (p["proc"], p["z_potwierdzeniem"], p["sklepy"]))' "$TMP/dane.json")
 PROC="${OCZEKIWANE%%|*}"; XZY="${OCZEKIWANE#*|}"
-KOD=$(curl -s -o "$TMP/strona.html" -w '%{http_code}' -H 'Cache-Control: no-cache' "$URL?odswiez=$START")
+# Bez parametrów w adresie — tak jak wchodzi czytelnik (parametr omija cache i zakryłby starą wersję).
+KOD=$(curl -s -o "$TMP/strona.html" -w '%{http_code}' "$URL")
 if [ "$KOD" != "200" ]; then echo "BŁĄD: strona zwróciła HTTP $KOD" >&2; exit 2; fi
 if ! grep -q "<b>$PROC</b>" "$TMP/strona.html" || ! grep -q "sklepów (${XZY})" "$TMP/strona.html"; then
   echo "BŁĄD: na stronie nie ma liczb z pliku ($PROC, $XZY) — sprawdź cache i szablon." >&2; exit 3
