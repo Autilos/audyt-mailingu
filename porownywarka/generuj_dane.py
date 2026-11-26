@@ -10,6 +10,9 @@ Wejście (katalog --zrodlo):
   klasyfikacja.jsonl   klasyfikacja maila po kluczu (kategoria, typ, rabat_max…)
   sklepy.json          lista sklepów (nazwa, branża, status zapisu, data zapisu)
   Raporty/Monitor-*.md najnowszy raport monitora — tabela „System | Sklepów | Sklepy”
+  monitor.py           funkcja podwojne_potwierdzenie() — JEDYNA definicja podwójnego potwierdzenia zapisu
+                       (ta sama liczba w monitorze i na stronie; bez monitor.py generator się zatrzymuje)
+  porownywarka-pomiary.json  (z --historia) historia pomiarów podwójnego potwierdzenia, dopisywana przy odświeżeniu
 
 Do pliku trafiają wyłącznie liczby i nazwy sklepów. Bez tematów maili, treści,
 adresów nadawców i nazwy skrzynki testowej.
@@ -22,13 +25,14 @@ from decimal import Decimal, ROUND_HALF_UP
 import collections
 import datetime as dt
 import glob
+import importlib.util
 import json
 import os
 import re
 import statistics as st
 import sys
 
-WERSJA = 2
+WERSJA = 3
 MIN_SKLEPOW_BRANZY = 3   # mniej sklepów = branża trafia do „inne”, bez karty porównania
 MALO_MAILI = 20  # mniej zwykłych newsletterów w branży = dopisek „orientacyjnie”
 MIN_DNI_CZESTOTLIWOSC = 7  # sklep wchodzi do „maili tygodniowo”, jeśli obserwujemy go co najmniej tydzień
@@ -43,7 +47,7 @@ RE_PROMOCJA = re.compile(r"promocj", re.I)
 RE_PROCENT = re.compile(r"%")
 RE_EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿]")
 RE_BLACK = re.compile(r"black|czarn\w* (piątek|tydzień)|cyber", re.I)
-RE_ZACHETA = re.compile(r"\d+\s?%|zł|rabat|kupon|zniżk", re.I)
+PRZYKLADY_ZACHETY = 4  # ile marek z rabatem w temacie prośby o potwierdzenie pokazujemy z nazwy
 
 
 def najczestsze(licznik, ile, nazwa, limit=4):
@@ -170,9 +174,9 @@ def wnioski(b, og):
             zd.append("Oferty i rabaty to %d%% newsletterów, podobnie jak we wszystkich branżach (%d%%)." % (p, p_og))
     po, pw = b["tabela"]["potwierdzenie"], b["tabela"]["powitanie"]
     if po["prosi"]:
-        a = "O potwierdzenie zapisu prosi %d %s" % (po["prosi"], z_ilu(po["sklepy"]))
+        a = "Kliknięcia w link potwierdzający zapis wymaga %d %s" % (po["prosi"], z_ilu(po["sklepy"]))
     else:
-        a = "Żaden sklep nie prosi o potwierdzenie zapisu"
+        a = "Żaden sklep nie wymaga kliknięcia w link potwierdzający zapis"
     if pw["sklepy"]:
         c = "rabat na powitanie daje %d %s z mailem powitalnym" % (pw["z_rabatem"], z_ilu(pw["sklepy"]))
     else:
@@ -245,6 +249,46 @@ def systemy_z_monitora(katalog):
     return wynik, os.path.basename(pliki[-1])
 
 
+def potwierdzenia_z_monitora(katalog, maile, klas):
+    """Wywołuje podwojne_potwierdzenie() z monitor.py w katalogu danych — ta sama logika co w monitorze,
+    bez liczenia drugi raz po swojemu. Brak monitor.py albo funkcji = błąd (nie zgadujemy)."""
+    sciezka = os.path.join(katalog, "monitor.py")
+    if not os.path.exists(sciezka):
+        raise SystemExit("Brak %s — nie liczę podwójnego potwierdzenia bez monitora." % sciezka)
+    spec = importlib.util.spec_from_file_location("monitor_newsletterow", sciezka)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    if not hasattr(mod, "podwojne_potwierdzenie"):
+        raise SystemExit("monitor.py nie ma funkcji podwojne_potwierdzenie().")
+    return mod.podwojne_potwierdzenie([
+        {"sklep": m["sklep"], "temat": m.get("temat"), "tresc": m.get("tresc"), "przyciski": m.get("przyciski"),
+         "typ": (klas.get(m["klucz"]) or {}).get("typ")} for m in maile])
+
+
+def historia(plik, wynik, dzis):
+    """Dopisuje dzisiejszy pomiar podwójnego potwierdzenia (jeden na dzień, ten sam dzień = nadpisanie)
+    i zwraca poprzedni pomiar z innego dnia albo None. Plik nie istnieje = zaczynamy historię."""
+    p = wynik["podwojne"]
+    pomiary = []
+    if os.path.exists(plik):
+        with open(plik, encoding="utf-8") as f:
+            pomiary = json.load(f)
+    pomiary = [x for x in pomiary if x.get("data") != dzis]
+    wczesniej = sorted((x for x in pomiary if x.get("data", "") < dzis), key=lambda x: x["data"])
+    pomiary.append({"data": dzis, "dane_do": wynik["okres"]["do"], "sklepy": p["sklepy"],
+                    "z_potwierdzeniem": p["z_potwierdzeniem"], "proc": p["proc"]})
+    pomiary.sort(key=lambda x: x["data"])
+    tmp = plik + ".nowy"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(pomiary, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, plik)
+    if not wczesniej:
+        return None
+    x = dict(wczesniej[-1])
+    x["data_pl"] = dt.date.fromisoformat(x["data"]).strftime("%d.%m.%Y")
+    return x
+
+
 def wczytaj(katalog):
     with open(os.path.join(katalog, "maile.jsonl"), encoding="utf-8") as f:
         maile = [json.loads(l) for l in f if l.strip()]
@@ -255,7 +299,8 @@ def wczytaj(katalog):
     return maile, klas, sklepy
 
 
-def policz(maile, klas, sklepy, systemy, teraz=None):
+def policz(maile, klas, sklepy, systemy, potwierdzenia, teraz=None):
+    """potwierdzenia = wynik monitor.podwojne_potwierdzenie() ({sklep: {"jak", "zacheta", ...}})."""
     po_nazwie = {norm(s["nazwa"]): s for s in sklepy}
 
     def sklep_z_listy(n):
@@ -290,13 +335,14 @@ def policz(maile, klas, sklepy, systemy, teraz=None):
         start = max(od, zapis) if zapis else min(m["_dt"] for m in ms).date()
         dni = (do - start).days + 1
         regularne = [m for m in ms if m["_k"] and m["_k"].get("typ") not in TYPY_STARTOWE]
-        potw = [m for m in ms if m["_k"] and m["_k"].get("typ") == "potwierdzenie"]
         powitalne = [m for m in ms if m["_k"] and m["_k"].get("typ") == "powitalny"]
         info[nazwa] = {
             "branza": branza_wspolna(s["branza"]) if s else "Inne",
             "maile": ms, "regularne": regularne, "dni": dni,
             "tydzien": zaokr(len(regularne) / dni * 7) if dni >= MIN_DNI_CZESTOTLIWOSC else None,
-            "potwierdzenie": bool(potw), "zacheta": any(RE_ZACHETA.search(m["temat"]) for m in potw),
+            "potwierdzenie": nazwa in potwierdzenia,
+            "potwierdzenie_jak": (potwierdzenia.get(nazwa) or {}).get("jak"),
+            "zacheta": bool((potwierdzenia.get(nazwa) or {}).get("zacheta")),
             "powitanie": bool(powitalne),
             "powitanie_rabat": any(m["_k"].get("rabat_max") or m.get("kody") for m in powitalne),
             "system": systemy.get(norm(nazwa)),
@@ -423,6 +469,22 @@ def policz(maile, klas, sklepy, systemy, teraz=None):
                             % (odmiana(len(cisza), "zapisany sklep", "zapisane sklepy", "zapisanych sklepów"),
                                odmiana(len(cisza), "wysłał", "wysłały", "wysłało"))})
 
+    # Podwójne potwierdzenie zapisu — liczby z monitora; branże te same co w tabeli (co najmniej 3 sklepy).
+    zach_nazwy = sorted(zach, key=lambda n: (-len(info[n]["maile"]), n.lower()))
+    podwojne = {
+        "sklepy": len(wszystkie), "z_potwierdzeniem": len(potw), "proc": procent(len(potw), len(wszystkie)),
+        "bez": len(wszystkie) - len(potw), "bez_proc": procent(len(wszystkie) - len(potw), len(wszystkie)),
+        "prosba": sum(1 for n in potw if info[n]["potwierdzenie_jak"] == "prosba"),
+        "tylko_podziekowanie": sum(1 for n in potw if info[n]["potwierdzenie_jak"] == "podziekowanie"),
+        "z_zacheta": len(zach),
+        "przyklady_zachety": zach_nazwy[:PRZYKLADY_ZACHETY],
+        "po_angielsku": sum(1 for n in potw if (potwierdzenia.get(n) or {}).get("jezyk") == "EN"),
+        "branze": sorted(({"nazwa": b["nazwa"], "slug": b["slug"], "sklepy": b["potwierdzenie"]["sklepy"],
+                           "z_potwierdzeniem": b["potwierdzenie"]["prosi"], "proc": b["potwierdzenie_proc"]}
+                          for b in branze), key=lambda x: (-x["proc"], -x["sklepy"], x["nazwa"])),
+        "poprzedni": None,
+    }
+
     return {
         "wersja": WERSJA,
         "wygenerowano": (teraz or dt.datetime.now()).strftime("%Y-%m-%d %H:%M"),
@@ -438,6 +500,7 @@ def policz(maile, klas, sklepy, systemy, teraz=None):
         "branze": branze,
         "ogolem": ogolem,
         "inne_branze": inne,
+        "podwojne": podwojne,
         "ciekawostki": ciekawostki,
         "progi": {"min_sklepow_branzy": MIN_SKLEPOW_BRANZY, "min_dni_czestotliwosc": MIN_DNI_CZESTOTLIWOSC},
     }
@@ -447,17 +510,23 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--zrodlo", default=os.path.expanduser("~/Obsidian/Zasoby/Newslettery-obserwacja"))
     p.add_argument("--wyjscie", default="dane-porownywarka.json")
+    p.add_argument("--historia", help="plik historii pomiarów (JSON); podany = dopisz dzisiejszy pomiar i pokaż zmianę")
     a = p.parse_args(argv)
     maile, klas, sklepy = wczytaj(a.zrodlo)
     systemy, raport = systemy_z_monitora(a.zrodlo)
-    wynik = policz(maile, klas, sklepy, systemy)
+    potwierdzenia = potwierdzenia_z_monitora(a.zrodlo, maile, klas)
+    wynik = policz(maile, klas, sklepy, systemy, potwierdzenia)
     wynik["zrodlo_systemow"] = raport
+    if a.historia:
+        wynik["podwojne"]["poprzedni"] = historia(a.historia, wynik, wynik["wygenerowano"][:10])
     with open(a.wyjscie, "w", encoding="utf-8") as f:
         json.dump(wynik, f, ensure_ascii=False, indent=1)
     l = wynik["liczby"]
-    print("Zapisano %s: okres %s–%s, %d maili, %d sklepów, %d branż z kartą, %d bez klasyfikacji"
+    pp = wynik["podwojne"]
+    print("Zapisano %s: okres %s–%s, %d maili, %d sklepów, %d branż z kartą, %d bez klasyfikacji; "
+          "podwójne potwierdzenie %d z %d (%s%%), z rabatem w temacie %d"
           % (a.wyjscie, wynik["okres"]["od_pl"], wynik["okres"]["do_pl"], l["maile"], l["sklepy_wysylajace"],
-             len(wynik["branze"]), l["bez_klasyfikacji"]))
+             len(wynik["branze"]), l["bez_klasyfikacji"], pp["z_potwierdzeniem"], pp["sklepy"], pp["proc"], pp["z_zacheta"]))
     return 0
 
 
