@@ -10,6 +10,12 @@ Porównywarka newsletterów: blok „Podwójne potwierdzenie zapisu” i odświe
 - `--historia`: pomiar dopisywany do JSON-a (jeden na dzień); „poprzedni pomiar” pokazuje się dopiero, gdy jest wpis z innego dnia.
 - `odswiez.sh`: bez interakcji (BatchMode SSH, zmienne z `~/.config/mkpk-porownywarka.env`), po wgraniu sprawdza żywą stronę (HTTP 200 + liczby z pliku), dopiero wtedy zapisuje historię i linijkę w dzienniku odświeżeń. Plik JSON: wersja 3, nowy klucz `podwojne`.
 
+## Strona /audyt-mailingu/ — 2026-11-26
+
+Skill audytu bez zmian, wersja bez zmian.
+
+- `landing/index.html` i strona na żywo (WP 3616): blok „Jak mailują polskie sklepy?” z przyciskiem „Zobacz porównywarkę” (link `/porownywarka-newsletterow/?zrodlo=audyt-mailingu`), między sekcją „Bezpieczeństwo” a „Najczęstsze pytania”. Tylko istniejące style strony.
+
 ## 0.3.9 — 2026-11-26
 
 Porównywarka newsletterów sklepów — nowa strona na marketingkrokpokroku.pl (szkic). Skill audytu bez zmian.
