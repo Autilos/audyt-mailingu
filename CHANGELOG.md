@@ -1,5 +1,11 @@
 # Zmiany
 
+## Strona /audyt-mailingu/ — 2026-11-26
+
+Skill audytu bez zmian, wersja bez zmian.
+
+- `landing/index.html` i strona na żywo (WP 3616): blok „Jak mailują polskie sklepy?” z przyciskiem „Zobacz porównywarkę” (link `/porownywarka-newsletterow/?zrodlo=audyt-mailingu`), między sekcją „Bezpieczeństwo” a „Najczęstsze pytania”. Tylko istniejące style strony.
+
 ## 0.3.9 — 2026-11-26
 
 Porównywarka newsletterów sklepów — nowa strona na marketingkrokpokroku.pl (szkic). Skill audytu bez zmian.
