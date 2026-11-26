@@ -22,10 +22,14 @@ Potem zrzut strony (telefon + komputer). Strona pokazuje datę ostatniej aktuali
 ## Jak liczymy
 
 - **Zwykłe newslettery** — wszystkie maile poza potwierdzeniem zapisu, powitaniem i przypomnieniem kodu powitalnego (`typ` z klasyfikacji). Z nich: częstotliwość, dni, godziny, udział sprzedaży, słowa w tematach.
-- **Newsletterów tygodniowo** — zwykłe newslettery sklepu / dni obserwacji × 7; dni obserwacji od daty zapisu (najwcześniej od pierwszego maila w danych) do ostatniego maila w danych. Tylko sklepy obserwowane co najmniej 7 dni. Na stronie mediana branży i rozrzut.
+- **Newsletterów tygodniowo** — zwykłe newslettery sklepu / dni obserwacji × 7; dni obserwacji od daty zapisu (najwcześniej od pierwszego maila w danych) do ostatniego maila w danych. Tylko sklepy obserwowane co najmniej 7 dni. Na stronie mediana branży („typowy sklep”).
 - **Potwierdzenie zapisu** — sklep przysłał prośbę o potwierdzenie albo podziękowanie za potwierdzenie (wzorce w temacie). „Z zachętą” = rabat, kwota albo kupon w temacie prośby.
 - **Rabat na powitanie** — sklep ma mail powitalny z `rabat_max` albo kodem.
-- **Programy do wysyłki** — z tabeli w raporcie monitora (rozpoznanie po nagłówkach maili).
+- **Programy do wysyłki** — z tabeli w raporcie monitora (rozpoznanie po nagłówkach maili). Na stronie jedna linijka: trzy najczęstsze i „i inne”.
+- **Tabela porównawcza** (`branze[].tabela`, `ogolem`) — maili w tygodniu, % ofert i rabatów, potwierdzenie zapisu (x z y), rabat na powitanie (x z y). Na stronie liczby pełne, poniżej 2 z jednym miejscem po przecinku. `wyroznienie` = najwyższa/najniższa wartość w kolumnie po zaokrągleniu, bez branż z małą liczbą maili i bez „x z y” przy y < 3.
+- **Wnioski** (`branze[].wnioski`) — trzy zdania z porównaniem branży do wszystkich sklepów, bez nowych liczb.
+- **Ciekawostki** — najwyżej 4, bez liczb z tabeli.
+- Sekcja „Jak liczę” jest w szablonie, ale ukryta (`{% set pokaz_metode = false %}`); `true` ją przywraca.
 - Karta branży tylko przy co najmniej 3 sklepach, które coś przysłały; mniejsze branże są wymienione z nazwy.
 
 ## Formularz „Dodaj swój sklep”

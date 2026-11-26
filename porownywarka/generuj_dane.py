@@ -28,10 +28,11 @@ import re
 import statistics as st
 import sys
 
-WERSJA = 1
+WERSJA = 2
 MIN_SKLEPOW_BRANZY = 3   # mniej sklepów = branża trafia do „inne”, bez karty porównania
 MALO_MAILI = 20  # mniej zwykłych newsletterów w branży = dopisek „orientacyjnie”
 MIN_DNI_CZESTOTLIWOSC = 7  # sklep wchodzi do „maili tygodniowo”, jeśli obserwujemy go co najmniej tydzień
+MIN_PROBA_WYROZNIENIA = 3  # „x z y” wyróżniamy w tabeli tylko przy y co najmniej tyle (1 z 1 to nie wynik)
 TYPY_STARTOWE = {"potwierdzenie", "powitalny", "przypomnienie-kodu"}
 SPRZEDAZ = {"sprzedazowy", "mieszany"}
 DNI_PL = ["pn", "wt", "śr", "czw", "pt", "sob", "nd"]
@@ -121,6 +122,96 @@ def liczba_pl(x):
     return ("%.1f" % x).replace(".", ",") if isinstance(x, float) else str(x)
 
 
+def liczba_strony(x):
+    """Liczba do tabeli na stronie: pełne liczby, poniżej 2 jedno miejsce po przecinku (0 bez przecinka)."""
+    if x is None:
+        return None
+    if x == 0:
+        return "0"
+    if x < 2:
+        return liczba_pl(zaokr(x))
+    return str(int(zaokr(x, 0)))
+
+
+def z_ilu(n):
+    """„z 1 sklepu” / „z 5 sklepów”."""
+    return "z %d %s" % (n, "sklepu" if n == 1 else "sklepów")
+
+
+def wnioski(b, og):
+    """Trzy zdania „co to znaczy dla Twojego sklepu” — porównanie branży z wszystkimi sklepami, bez nowych liczb."""
+    zd = []
+    t, t_og = b["tabela"]["tydzien_wartosc"], og["tydzien_wartosc"]
+    if t == 0:
+        zd.append("Co najmniej połowa sklepów w tej branży nie wysłała w tym czasie żadnego newslettera, a ogół sklepów wysyła %s tygodniowo." % og["tydzien"])
+    elif t is None:
+        zd.append("Za krótko obserwuję te sklepy, żeby policzyć, ile newsletterów wysyłają w tygodniu.")
+    else:
+        ile = "%s %s tygodniowo" % (b["tabela"]["tydzien"], "newslettera" if "," in b["tabela"]["tydzien"]
+                                     else odmiana(int(b["tabela"]["tydzien"]), "newsletter", "newslettery", "newsletterów"))
+        if t_og and t < 0.75 * t_og:
+            jak = "rzadziej niż ogół sklepów"
+        elif t_og and t > 1.33 * t_og:
+            jak = "częściej niż ogół sklepów"
+        else:
+            jak = "mniej więcej tyle co ogół sklepów"
+        zd.append("Typowy sklep w tej branży wysyła %s, czyli %s (%s)." % (ile, jak, og["tydzien"]))
+    p, p_og = b["tabela"]["oferty_proc"], og["oferty_proc"]
+    if p is not None:
+        if p == 100:
+            zd.append("Każdy newsletter to oferta albo rabat (we wszystkich branżach %d%%)." % p_og)
+        elif p >= 90:
+            zd.append("Prawie każdy newsletter to oferta albo rabat: %d%% (we wszystkich branżach %d%%)." % (p, p_og))
+        elif p > p_og + 5:
+            zd.append("Oferty i rabaty to %d%% newsletterów, więcej niż we wszystkich branżach (%d%%)." % (p, p_og))
+        elif p < p_og - 5:
+            zd.append("Oferty i rabaty to %d%% newsletterów, mniej niż we wszystkich branżach (%d%%)." % (p, p_og))
+        else:
+            zd.append("Oferty i rabaty to %d%% newsletterów, podobnie jak we wszystkich branżach (%d%%)." % (p, p_og))
+    po, pw = b["tabela"]["potwierdzenie"], b["tabela"]["powitanie"]
+    if po["prosi"]:
+        a = "O potwierdzenie zapisu prosi %d %s" % (po["prosi"], z_ilu(po["sklepy"]))
+    else:
+        a = "Żaden sklep nie prosi o potwierdzenie zapisu"
+    if pw["sklepy"]:
+        c = "rabat na powitanie daje %d %s z mailem powitalnym" % (pw["z_rabatem"], z_ilu(pw["sklepy"]))
+    else:
+        c = "żaden nie przysłał maila powitalnego"
+    zd.append("%s, a %s." % (a, c))
+    return zd
+
+
+def wyroznij(branze):
+    """Najwyższa i najniższa wartość w każdej kolumnie tabeli (po zaokrągleniu, remisy razem).
+    Pomijamy branże z małą liczbą maili i „x z y” przy y < MIN_PROBA_WYROZNIENIA."""
+    def wart(b, kol):
+        t = b["tabela"]
+        if kol == "tydzien":
+            return None if t["tydzien"] is None else float(t["tydzien"].replace(",", "."))
+        if kol == "oferty":
+            return t["oferty_proc"]
+        x = t[kol]
+        n = x["sklepy"]
+        return procent(x["prosi"] if kol == "potwierdzenie" else x["z_rabatem"], n) if n >= MIN_PROBA_WYROZNIENIA else None
+    for b in branze:
+        b["wyroznienie"] = {}
+    for kol in ("tydzien", "oferty", "potwierdzenie", "powitanie"):
+        w = {b["slug"]: wart(b, kol) for b in branze if not b["malo_danych"]}
+        w = {k: v for k, v in w.items() if v is not None}
+        if len(set(w.values())) < 2:
+            continue
+        hi, lo = max(w.values()), min(w.values())
+        for b in branze:
+            if b["slug"] in w:
+                b["wyroznienie"][kol] = "max" if w[b["slug"]] == hi else "min" if w[b["slug"]] == lo else None
+
+
+def systemy_linia(systemy):
+    """Jedna linijka: trzy najczęstsze programy i „i inne”."""
+    nazwy = [s["nazwa"] for s in systemy]
+    return ", ".join(nazwy[:3]) + (" i inne" if len(nazwy) > 3 else "") if nazwy else None
+
+
 def rabat_proc(v):
     m = re.search(r"(\d{1,2})\s?%", str(v or ""))
     return int(m.group(1)) if m else None
@@ -147,7 +238,7 @@ def systemy_z_monitora(katalog):
                 continue
             system = re.sub(r"\s*\(.*?\)", "", kol[0]).strip()
             if system.lower() == "platforma sklepu":
-                system = "platforma sklepu (IdoSell, Shoper i inne)"
+                system = "platforma sklepu (np. IdoSell, Shoper)"
             for sklep in kol[2].split(","):
                 if sklep.strip():
                     wynik[norm(sklep)] = system
@@ -226,6 +317,14 @@ def policz(maile, klas, sklepy, systemy, teraz=None):
 
     cisza = [s for s in sklepy if milczy(s)]
 
+    def tabela(tyg, n_sprz, n_reg, prosi, sklepy_n, z_rabatem, z_powitaniem):
+        """Cztery liczby z tabeli porównawczej (te same definicje co w karcie)."""
+        med = zaokr(st.median(tyg)) if tyg else None
+        return {"tydzien": liczba_strony(med), "tydzien_wartosc": med,
+                "oferty_proc": procent(n_sprz, n_reg),
+                "potwierdzenie": {"prosi": prosi, "sklepy": sklepy_n},
+                "powitanie": {"z_rabatem": z_rabatem, "sklepy": z_powitaniem}}
+
     def karta(nazwa_br, sklepy_br):
         ms = [m for n in sklepy_br for m in info[n]["maile"]]
         reg = [m for n in sklepy_br for m in info[n]["regularne"]]
@@ -266,6 +365,10 @@ def policz(maile, klas, sklepy, systemy, teraz=None):
                           "sklepy": len(z_powitaniem)},
             "systemy": [{"nazwa": k, "sklepy": v} for k, v in sorted(sys_c.items(), key=lambda x: (-x[1], x[0].lower()))],
             "systemy_rozpoznane": sum(sys_c.values()),
+            "systemy_linia": systemy_linia([{"nazwa": k} for k, v in sorted(sys_c.items(), key=lambda x: (-x[1], x[0].lower()))]),
+            "tabela": tabela(tyg, len(sprz), len(reg),
+                             sum(1 for n in sklepy_br if info[n]["potwierdzenie"]), len(sklepy_br),
+                             sum(1 for n in z_powitaniem if info[n]["powitanie_rabat"]), len(z_powitaniem)),
             "przyklady": [n for n in kolejnosc],
             "najczesciej": [{"nazwa": n, "maile": len(info[n]["maile"]),
                              "tydzien": liczba_pl(info[n]["tydzien"]) if info[n]["tydzien"] is not None else None}
@@ -297,36 +400,28 @@ def policz(maile, klas, sklepy, systemy, teraz=None):
     n_rabat = sum(1 for t in tematy_all if RE_RABAT.search(t))
     n_promo = sum(1 for t in tematy_all if RE_PROMOCJA.search(t))
     n_emoji = sum(1 for t in tematy_all if RE_EMOJI.search(t))
+    ogolem = tabela(tyg_all, len(sprz_all), len(reg_all), len(potw), len(wszystkie), len(powit_r), len(powit))
+    ogolem["sklepy"] = len(wszystkie)
+    for b in branze:
+        b["wnioski"] = wnioski(b, ogolem)
+    wyroznij(branze)
+
+    # Ciekawostki — najwyżej 4, każda jednym zdaniem z liczbą; bez liczb, które są już w tabeli.
     ciekawostki = []
-    if potw:
-        ciekawostki.append({"liczba": "%d%%" % procent(len(potw), len(wszystkie)),
-                            "tekst": "sklepów prosi o potwierdzenie zapisu mailem (%d z %d). Tylko %d %s zachętę (rabat albo kwotę) już w temacie tego maila."
-                            % (len(potw), len(wszystkie), len(zach), odmiana(len(zach), "daje", "dają", "daje"))})
-    if tyg_all:
-        ciekawostki.append({"liczba": tyg_all and liczba_pl(zaokr(st.median(tyg_all))),
-                            "tekst": "zwykłego newslettera tygodniowo wysyła typowy (środkowy) sklep. Rozrzut jest duży: od %s do %s (%d %s obserwowanych co najmniej tydzień)."
-                            % (liczba_pl(tyg_all[0]), liczba_pl(tyg_all[-1]), len(tyg_all), odmiana(len(tyg_all), "sklep", "sklepy", "sklepów"))})
-    if reg_all:
-        ciekawostki.append({"liczba": "%d%%" % procent(len(sprz_all), len(reg_all)),
-                            "tekst": "zwykłych newsletterów w tym okresie to maile sprzedażowe. W %d%% tematów jest „Black” (Black Friday, Black Week, Black Days i podobne) albo „Cyber”."
-                            % procent(sum(1 for t in tematy_all if RE_BLACK.search(t)), len(tematy_all))})
     if tematy_all:
-        ciekawostki.append({"liczba": "%d wobec %d" % (n_rabat, n_promo),
-                            "tekst": "tyle tematów ma słowo „rabat”, a tyle słowo „promocja”. Sam znak procentu jest w %d tematach."
-                            % sum(1 for t in tematy_all if RE_PROCENT.search(t))})
         ciekawostki.append({"liczba": "%d%%" % procent(n_emoji, len(tematy_all)),
-                            "tekst": "tematów ma emoji (%d z %d zwykłych newsletterów)." % (n_emoji, len(tematy_all))})
-    if powit:
-        ciekawostki.append({"liczba": "%d z %d" % (len(powit_r), len(powit)),
-                            "tekst": "sklepów z mailem powitalnym daje w nim rabat albo kod."})
+                            "tekst": "tematów newsletterów ma emoji (%d z %d)." % (n_emoji, len(tematy_all))})
     if rabaty:
         ciekawostki.append({"liczba": "%d%%" % round(st.median(rabaty)),
-                            "tekst": "tyle wynosi typowy najwyższy rabat w mailu sprzedażowym, np. „do 40%%” (wartość środkowa z %d %s z rabatem procentowym)."
-                            % (len(rabaty), odmiana(len(rabaty), "mail", "maile", "maili"))})
+                            "tekst": "to typowy najwyższy rabat w mailu z ofertą, np. „do %d%%”." % round(st.median(rabaty))})
+    if n_rabat or n_promo:
+        ciekawostki.append({"liczba": "%d wobec %d" % (n_rabat, n_promo),
+                            "tekst": "tyle tematów ma słowo „rabat”, a tyle słowo „promocja”."})
     if cisza:
         ciekawostki.append({"liczba": str(len(cisza)),
-                            "tekst": "%s po zapisie nie %s ani jednego maila przez co najmniej tydzień, choć trwał Black Week."
-                            % (odmiana(len(cisza), "sklep", "sklepy", "sklepów"), odmiana(len(cisza), "wysłał", "wysłały", "wysłało"))})
+                            "tekst": "%s nie %s ani jednego maila w tygodniu po zapisie, choć trwał Black Week."
+                            % (odmiana(len(cisza), "zapisany sklep", "zapisane sklepy", "zapisanych sklepów"),
+                               odmiana(len(cisza), "wysłał", "wysłały", "wysłało"))})
 
     return {
         "wersja": WERSJA,
@@ -341,6 +436,7 @@ def policz(maile, klas, sklepy, systemy, teraz=None):
             "sprzedazowe_proc": procent(len(sprz_all), len(reg_all)),
         },
         "branze": branze,
+        "ogolem": ogolem,
         "inne_branze": inne,
         "ciekawostki": ciekawostki,
         "progi": {"min_sklepow_branzy": MIN_SKLEPOW_BRANZY, "min_dni_czestotliwosc": MIN_DNI_CZESTOTLIWOSC},

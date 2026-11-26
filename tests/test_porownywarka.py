@@ -73,6 +73,26 @@ class Generator(unittest.TestCase):
         self.assertEqual(b["systemy"], [{"nazwa": "EmailLabs", "sklepy": 1}])
         self.assertEqual(b["najczesciej"][0]["nazwa"], "Alfa")
         self.assertEqual(b["cisza"], 1)
+        self.assertEqual(b["tabela"], {"tydzien": "1,0", "tydzien_wartosc": 1.0, "oferty_proc": 83,
+                                       "potwierdzenie": {"prosi": 3, "sklepy": 3},
+                                       "powitanie": {"z_rabatem": 3, "sklepy": 3}})
+        self.assertEqual(b["systemy_linia"], "EmailLabs")
+        self.assertEqual(len(b["wnioski"]), 3)
+        self.assertIn("1,0", b["wnioski"][0])
+        self.assertIn("83%", b["wnioski"][1])
+
+    def test_ogolem(self):
+        o = self.d["ogolem"]
+        self.assertEqual(o["sklepy"], 4)
+        self.assertEqual(o["oferty_proc"], 86)  # 6 z 7 newsletterów (z Deltą)
+        self.assertEqual(o["potwierdzenie"], {"prosi": 3, "sklepy": 4})
+        self.assertEqual(o["powitanie"], {"z_rabatem": 3, "sklepy": 3})
+
+    def test_ciekawostki_najwyzej_cztery(self):
+        self.assertLessEqual(len(self.d["ciekawostki"]), 4)
+        tekst = json.dumps(self.d["ciekawostki"], ensure_ascii=False)
+        for zakazane in ("zwykł", "rozrzut", "potwierdzenie zapisu"):
+            self.assertNotIn(zakazane, tekst)
 
     def test_mala_branza_bez_karty(self):
         self.assertEqual(self.d["inne_branze"], [{"nazwa": "Kawa", "sklepy": 1, "maile": 1}])
@@ -109,6 +129,25 @@ class Pomocnicze(unittest.TestCase):
         self.assertEqual(g.najczestsze(c, 2, str), ["0", "1", "3"])  # remis — wszystkie trzy, nie arbitralnie dwa
         self.assertEqual(g.najczestsze(collections.Counter({i: 1 for i in range(6)}), 2, str), [])
 
+    def test_liczba_strony(self):
+        self.assertEqual([g.liczba_strony(x) for x in (None, 0.0, 0.8, 1.0, 1.95, 2.0, 2.5, 3.2, 8.0)],
+                         [None, "0", "0,8", "1,0", "2,0", "2", "3", "3", "8"])
+
+    def test_wyroznienia(self):
+        def b(slug, tyd, of, prosi, n, malo=False):
+            return {"slug": slug, "malo_danych": malo, "tabela": {
+                "tydzien": tyd, "oferty_proc": of, "potwierdzenie": {"prosi": prosi, "sklepy": n},
+                "powitanie": {"z_rabatem": 1, "sklepy": 1}}}
+        br = [b("a", "0,8", 90, 1, 4), b("b", "3", 70, 3, 4), b("c", "3", 80, 2, 2), b("d", "9", 10, 0, 5, malo=True)]
+        g.wyroznij(br)
+        w = {x["slug"]: x["wyroznienie"] for x in br}
+        self.assertEqual(w["a"]["tydzien"], "min")
+        self.assertEqual((w["b"]["tydzien"], w["c"]["tydzien"]), ("max", "max"))  # remis po zaokrągleniu
+        self.assertEqual(w["d"], {})  # mało maili — bez wyróżnień
+        self.assertEqual((w["a"]["potwierdzenie"], w["b"]["potwierdzenie"]), ("min", "max"))
+        self.assertNotIn("potwierdzenie", w["c"])  # 2 z 2 — za mała próba
+        self.assertNotIn("powitanie", w["a"])  # wszędzie 1 z 1
+
     def test_odmiana(self):
         self.assertEqual([g.odmiana(n, "sklep", "sklepy", "sklepów") for n in (1, 3, 5, 12, 22)],
                          ["sklep", "sklepy", "sklepów", "sklepów", "sklepy"])
@@ -121,7 +160,7 @@ class Pomocnicze(unittest.TestCase):
                         "| Platforma sklepu (IdoSell, Shoper) | 1 | Gamma |\n\npo tabeli | A | 1 | Zeta |\n")
             s, plik = g.systemy_z_monitora(k)
         self.assertEqual(plik, "Monitor-2026-11-01.md")
-        self.assertEqual(s, {"alfa": "EmailLabs", "beta": "EmailLabs", "gamma": "platforma sklepu (IdoSell, Shoper i inne)"})
+        self.assertEqual(s, {"alfa": "EmailLabs", "beta": "EmailLabs", "gamma": "platforma sklepu (np. IdoSell, Shoper)"})
 
     def test_cli(self):
         maile, klas, sklepy = zestaw()

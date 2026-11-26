@@ -1,63 +1,68 @@
 {% extends "templates/usluga.twig" %}
-{# Porównywarka newsletterów sklepów (repo Autilos/audyt-mailingu, porownywarka/wp/). 26.11.2026
+{# Porównywarka newsletterów sklepów (repo Autilos/audyt-mailingu, porownywarka/wp/). 26.11.2026, v2 (przejrzystsza)
    Wszystkie liczby z jednego pliku: function('mkpk_porownywarka_dane') = uploads/mkpk-porownywarka/dane.json
    (generuje porownywarka/generuj_dane.py). Style zawężone do .usl .pn. Formularz: mu-plugins/mkpk-porownywarka.php. #}
 {% block custom_head %}
 {{ parent() }}
 <style>
-.usl .pn{--czerw:#c8102e;--linia:rgba(215,187,121,.28);--pas:#5a161d}
+.usl .pn{--czerw:#c8102e;--linia:rgba(215,187,121,.28)}
 .usl .pn section{scroll-margin-top:70px;padding:48px 0 0}
 .usl .pn .pn-hero{padding:40px 0 0}
 .usl .pn h1{font-size:clamp(2.1rem,7vw,4.2rem)}
 .usl .pn .u-lead{margin-top:18px!important}
-.usl .pn .pn-uwaga{margin:22px 0 0;max-width:760px;border-left:4px solid var(--czerw);background:rgba(200,16,46,.12);padding:14px 16px;border-radius:0 8px 8px 0;font-size:.98rem}
+.usl .pn .pn-uwaga{margin:18px 0 0;max-width:760px;border-left:4px solid var(--czerw);background:rgba(200,16,46,.12);padding:12px 16px;border-radius:0 8px 8px 0;font-size:.95rem}
 .usl .pn .pn-uwaga b{color:#fff4dc}
-.usl .pn .pn-przyciski{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}
-.usl .pn .pn-przyciski .u-cta{margin:0}
-.usl .pn .pn-btn2{display:inline-block;border:1px solid var(--zloto);color:var(--tekst)!important;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600}
+.usl .pn .pn-btn2{display:inline-block;margin-top:22px;border:1px solid var(--zloto);color:var(--tekst)!important;text-decoration:none;padding:12px 22px;border-radius:6px;font-weight:600}
 .usl .pn .pn-btn2:hover{background:rgba(215,187,121,.12)}
-.usl .pn .u-status{grid-template-columns:repeat(4,auto)}
-/* wybór branży */
-.usl .pn .pn-wybor{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
-.usl .pn .pn-wybor button{font:600 .95rem/1.2 inherit;font-family:inherit;color:var(--tekst);background:rgba(41,0,4,.7);border:1px solid var(--linia);border-radius:999px;padding:10px 16px;cursor:pointer;min-height:44px}
-.usl .pn .pn-wybor button small{font-family:var(--mono);font-weight:400;color:var(--szary);margin-left:6px;font-size:.75rem}
-.usl .pn .pn-wybor button[aria-selected=true]{background:var(--zloto);color:#290004;border-color:var(--zloto)}
-.usl .pn .pn-wybor button[aria-selected=true] small{color:#5a3b10}
-.usl .pn .pn-wybor button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.usl .pn .pn-drobne{font-size:.85rem;color:var(--szary);margin:8px 0 0;line-height:1.55}
+/* tabela porównawcza */
+.usl .pn .pn-podpowiedz{margin:0 0 14px;font-size:.95rem}
+.usl .pn .pn-tabwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid rgba(215,187,121,.35);border-radius:12px;background:rgba(20,0,2,.45)}
+.usl .pn table.pn-tab{width:100%;border-collapse:collapse;font-size:1rem;line-height:1.25}
+.usl .pn .pn-tab th,.usl .pn .pn-tab td{padding:12px 10px;border-bottom:1px solid var(--linia);text-align:center;vertical-align:middle}
+.usl .pn .pn-tab thead th{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--zloto);font-weight:400;line-height:1.35;vertical-align:bottom}
+.usl .pn .pn-tab thead th:first-child,.usl .pn .pn-tab tbody th,.usl .pn .pn-tab tfoot th{text-align:left}
+.usl .pn .pn-tab td{font-weight:700;color:#fff4dc;white-space:nowrap}
+.usl .pn .pn-tab td small{font-weight:400;color:var(--szary);font-size:.8em}
+.usl .pn .pn-tab tbody tr{cursor:pointer}
+.usl .pn .pn-tab tbody tr:hover{background:rgba(215,187,121,.07)}
+.usl .pn .pn-tab tbody tr.wybrany{background:rgba(215,187,121,.16)}
+.usl .pn .pn-tab tbody tr.wybrany th button{color:var(--zloto)}
+.usl .pn .pn-tab th button{all:unset;cursor:pointer;font-weight:700;color:#fff4dc;display:block;line-height:1.25}
+.usl .pn .pn-tab th button:after{content:" ›";color:var(--zloto)}
+.usl .pn .pn-tab th button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.usl .pn .pn-tab th small{display:block;font-weight:400;color:var(--szary);font-size:.78rem;margin-top:2px}
+.usl .pn .pn-tab td.pn-max{background:rgba(134,239,172,.16);box-shadow:inset 0 0 0 2px rgba(134,239,172,.55)}
+.usl .pn .pn-tab td.pn-min{background:rgba(255,138,148,.14);box-shadow:inset 0 0 0 2px rgba(255,138,148,.55)}
+.usl .pn .pn-tab tfoot th,.usl .pn .pn-tab tfoot td{border-bottom:0;border-top:2px solid rgba(215,187,121,.55);color:var(--zloto)}
+.usl .pn .pn-legenda{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0 0;font-size:.85rem;color:var(--szary)}
+.usl .pn .pn-legenda span:before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.usl .pn .pn-legenda .l-max:before{background:rgba(134,239,172,.3);box-shadow:inset 0 0 0 2px rgba(134,239,172,.7)}
+.usl .pn .pn-legenda .l-min:before{background:rgba(255,138,148,.25);box-shadow:inset 0 0 0 2px rgba(255,138,148,.7)}
+.usl .pn .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 /* karta branży */
-.usl .pn .pn-karta{background:linear-gradient(180deg,var(--karta),var(--tlo2));border:1px solid rgba(215,187,121,.35);border-top:3px solid var(--czerw);border-radius:14px;padding:22px 18px}
+.usl .pn .pn-karta{margin-top:18px;scroll-margin-top:80px;background:linear-gradient(180deg,var(--karta),var(--tlo2));border:1px solid rgba(215,187,121,.35);border-top:3px solid var(--czerw);border-radius:14px;padding:22px 18px}
 .usl .pn .pn-karta[hidden]{display:none}
-.usl .pn .pn-karta > h3{font-size:1.35rem;margin:0 0 4px}
-.usl .pn .pn-karta > .pn-pod{color:var(--szary);font-size:.92rem;margin:0 0 18px}
-.usl .pn .pn-kafle{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.usl .pn .pn-kafel{background:rgba(20,0,2,.55);border:1px solid var(--linia);border-radius:10px;padding:14px}
-.usl .pn .pn-kafel span{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--zloto);line-height:1.35}
-.usl .pn .pn-kafel b{display:block;font-size:2rem;line-height:1.1;margin:8px 0 4px;color:#fff4dc;font-weight:800}
-.usl .pn .pn-kafel b small{font-size:1rem;font-weight:600;color:var(--szary)}
-.usl .pn .pn-kafel p{margin:0;font-size:.85rem;color:var(--szary);line-height:1.45}
-.usl .pn .pn-blok{margin-top:22px}
+.usl .pn .pn-karta h3{font-size:1.3rem;margin:0 0 12px}
+.usl .pn .pn-wnioski{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.usl .pn .pn-wnioski li{padding-left:22px;position:relative;font-size:1.02rem}
+.usl .pn .pn-wnioski li:before{content:"";position:absolute;left:2px;top:.62em;width:9px;height:9px;border-radius:50%;background:var(--zloto)}
+.usl .pn .pn-blok{margin-top:20px}
 .usl .pn .pn-blok h4{margin:0 0 10px;font-size:1rem;color:#fff4dc}
-.usl .pn .pn-blok p{font-size:.95rem}
-.usl .pn .pn-dni{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:120px;margin:0 0 6px}
+.usl .pn .pn-blok p{margin:0;font-size:.95rem}
+.usl .pn .pn-dni{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:100px;margin:0 0 6px}
 .usl .pn .pn-dni div{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:4px}
 .usl .pn .pn-dni i{display:block;width:100%;max-width:44px;background:var(--zloto);border-radius:4px 4px 0 0;min-height:2px}
 .usl .pn .pn-dni em{font-style:normal;font-family:var(--mono);font-size:.72rem;color:var(--szary)}
-.usl .pn .pn-dni-podpis{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;font-family:var(--mono);font-size:.75rem;color:var(--zloto);margin-bottom:10px}
-.usl .pn .pn-paski{display:grid;gap:10px}
-.usl .pn .pn-pasek{display:grid;grid-template-columns:minmax(0,1fr) 46px;gap:4px 10px;align-items:center;font-size:.92rem}
-.usl .pn .pn-pasek > span{grid-column:1/-1}
-.usl .pn .pn-pasek div{height:10px;background:rgba(215,187,121,.15);border-radius:5px;overflow:hidden}
-.usl .pn .pn-pasek div i{display:block;height:100%;background:var(--zloto)}
-.usl .pn .pn-pasek b{font-family:var(--mono);text-align:right;font-size:.9rem}
-.usl .pn .pn-chipy{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px;padding:0;list-style:none}
-.usl .pn .pn-chipy li{border:1px solid var(--linia);border-radius:6px;padding:4px 10px;font-size:.88rem;background:rgba(20,0,2,.5)}
-.usl .pn .pn-chipy li b{font-family:var(--mono);color:var(--zloto);font-weight:400;margin-left:4px}
-.usl .pn .pn-drobne{font-size:.85rem;color:var(--szary);margin:6px 0 0}
+.usl .pn .pn-dni-podpis{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;font-family:var(--mono);font-size:.75rem;color:var(--zloto);margin-bottom:8px}
+.usl .pn details{margin-top:18px;border-top:1px solid var(--linia);padding-top:12px}
+.usl .pn summary{cursor:pointer;color:var(--zloto);font-weight:600;font-size:.95rem;min-height:32px}
+.usl .pn details p{margin:8px 0 0;font-size:.92rem;color:var(--szary)}
 /* ciekawostki */
 .usl .pn .pn-ciek{display:grid;grid-template-columns:1fr;gap:12px}
 .usl .pn .pn-ciek div{border:1px solid var(--linia);border-radius:12px;padding:16px 18px;background:rgba(41,0,4,.6)}
 .usl .pn .pn-ciek b{display:block;font-size:1.9rem;line-height:1.1;color:var(--zloto);font-weight:800;margin-bottom:4px}
-.usl .pn .pn-ciek p{margin:0;font-size:.95rem}
+.usl .pn .pn-ciek p{margin:0;font-size:.98rem}
 /* dodaj sklep */
 .usl .pn .pn-sciezki{display:grid;grid-template-columns:1fr;gap:16px}
 .usl .pn .pn-sciezka{border:1px solid var(--zloto);border-radius:14px;padding:22px 18px;background:linear-gradient(180deg,var(--karta),var(--tlo2))}
@@ -78,22 +83,32 @@
 .usl .pn .pn-metoda{max-width:820px;padding-left:20px}
 .usl .pn .pn-metoda li{margin:0 0 10px}
 @media (min-width:700px){
-  .usl .pn .pn-kafle{grid-template-columns:repeat(4,1fr)}
-  .usl .pn .pn-karta{padding:28px 28px}
-  .usl .pn .pn-ciek{grid-template-columns:repeat(2,1fr)}
+  .usl .pn .pn-karta{padding:26px 28px}
   .usl .pn .pn-dwie{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  .usl .pn .pn-ciek{grid-template-columns:repeat(2,1fr)}
   .usl .pn .pn-sciezki{grid-template-columns:1.25fr 1fr}
   .usl .pn form .pn-dwa{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .usl .pn form button{justify-self:start}
+  .usl .pn .pn-tab th,.usl .pn .pn-tab td{padding:13px 16px}
+  .usl .pn .pn-tab td{font-size:1.15rem}
 }
-@media (min-width:1000px){.usl .pn .pn-ciek{grid-template-columns:repeat(3,1fr)}}
-@media (max-width:820px){.usl .pn .u-status{grid-template-columns:1fr 1fr}}
-@media (max-width:699px){.usl .pn form button{width:100%}}
+@media (max-width:699px){
+  .usl .pn form button{width:100%}
+  .usl .pn table.pn-tab{font-size:.92rem}
+  .usl .pn .pn-tab th,.usl .pn .pn-tab td{padding:10px 5px}
+  .usl .pn .pn-tab th:first-child{padding-left:10px}
+  .usl .pn .pn-tab thead th{font-family:inherit;text-transform:none;letter-spacing:0;font-size:.72rem;font-weight:600;line-height:1.25}
+  .usl .pn .pn-tab td small{display:block;font-size:.72rem}
+  .usl .pn .pn-tab th small{font-size:.7rem}
+  .usl .pn .pn-tab th button:after{content:""}
+}
 </style>
 {% endblock %}
 
 {% block content %}
 {% set d = function('mkpk_porownywarka_dane') %}
+{# Sekcja „Jak liczę” — na razie ukryta (decyzja Wojtka 26.11). Przywrócenie: true. #}
+{% set pokaz_metode = false %}
 <div class="usl"><div class="pn">
 {% if not d %}
   <section class="pn-hero">
@@ -104,102 +119,104 @@
 {% else %}
   {% set l = d.liczby %}
   {% set o = d.okres %}
+  {% set og = d.ogolem %}
   <section class="pn-hero">
     <div class="u-kicker">Porównywarka newsletterów · {{ o.od_pl }}–{{ o.do_pl }}</div>
     <h1>Jak mailują polskie sklepy?</h1>
-    <p class="u-lead">Zapisałem się do newsletterów {{ l.sklepy_zapisane }} polskich sklepów i liczę każdy mail, który przychodzi. Przez {{ o.dni }} dni, od {{ o.od_pl }} do {{ o.do_pl }}, przyszło {{ l.maile }} maili od {{ l.sklepy_wysylajace }} sklepów. Wybierz branżę i zobacz, jak często piszą, kiedy i o czym.</p>
-    <p class="pn-uwaga"><b>Ważne: w tym okresie był Black Week.</b> Sklepy wysyłały wtedy więcej maili z rabatami niż zwykle, więc udział maili sprzedażowych i liczba maili w tygodniu są wyższe niż w spokojnym miesiącu.</p>
-    <div class="pn-przyciski">
-      <a class="u-cta" href="#branze">Wybierz branżę</a>
-      <a class="pn-btn2" href="#dodaj">Dodaj swój sklep</a>
-    </div>
-    <div class="u-status">
-      <div><span>Maili</span><b>{{ l.maile }}</b></div>
-      <div><span>Sklepów, które pisały</span><b>{{ l.sklepy_wysylajace }}</b></div>
-      <div><span>Branż do porównania</span><b>{{ d.branze|length }}</b></div>
-      <div><span>Okres</span><b>{{ o.dni }} dni</b></div>
-    </div>
+    <p class="u-lead">Zapisałem się do newsletterów {{ l.sklepy_zapisane }} polskich sklepów i liczę każdy mail: przez {{ o.dni }} dni przyszło {{ l.maile }} maili od {{ l.sklepy_wysylajace }} sklepów.</p>
+    <p class="pn-uwaga"><b>W tym czasie był Black Week</b>, więc maili z rabatami jest więcej niż w spokojnym miesiącu.</p>
+    <a class="pn-btn2" href="#dodaj">Dodaj swój sklep do porównania</a>
   </section>
 
   <section id="branze">
     <div class="u-kicker">Porównanie branż</div>
-    <h2>Wybierz branżę</h2>
-    <div class="pn-wybor" role="tablist" aria-label="Branże">
-      {% for b in d.branze %}
-      <button type="button" role="tab" id="pn-tab-{{ b.slug }}" aria-controls="pn-{{ b.slug }}" aria-selected="{{ loop.first ? 'true' : 'false' }}" data-branza="{{ b.slug }}">{{ b.nazwa }}<small>{{ b.sklepy }}</small></button>
-      {% endfor %}
+    <h2>Jak piszą sklepy z Twojej branży</h2>
+    <p class="pn-podpowiedz">Kliknij branżę, żeby zobaczyć, co to znaczy dla Twojego sklepu.</p>
+    <div class="pn-tabwrap">
+      <table class="pn-tab">
+        <thead>
+          <tr>
+            <th scope="col">Branża</th>
+            <th scope="col">Maili w tygodniu</th>
+            <th scope="col">Ile to oferty i rabaty</th>
+            <th scope="col">Prosi o potwier&shy;dzenie zapisu</th>
+            <th scope="col">Rabat na powitanie</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in d.branze %}
+          {% set t = b.tabela %}
+          {% set w = b.wyroznienie %}
+          <tr data-wiersz="{{ b.slug }}">
+            <th scope="row"><button type="button" data-branza="{{ b.slug }}" aria-controls="pn-{{ b.slug }}" aria-pressed="false">{{ b.nazwa }}{% if b.malo_danych %}*{% endif %}</button><small>{{ b.sklepy }} {{ b.sklepy in [2,3,4] or (b.sklepy % 10 in [2,3,4] and b.sklepy % 100 not in [12,13,14]) ? 'sklepy' : 'sklepów' }}</small></th>
+            {% for k in ['tydzien', 'oferty', 'potwierdzenie', 'powitanie'] %}
+            {% set wy = w[k] ?? null %}
+            <td{% if wy %} class="pn-{{ wy }}"{% endif %}>
+              {%- if k == 'tydzien' -%}{{ t.tydzien ?? '–' }}
+              {%- elseif k == 'oferty' -%}{{ t.oferty_proc is not null ? t.oferty_proc ~ '%' : '–' }}
+              {%- elseif k == 'potwierdzenie' -%}{{ t.potwierdzenie.prosi }} <small>z {{ t.potwierdzenie.sklepy }}</small>
+              {%- else -%}{% if t.powitanie.sklepy %}{{ t.powitanie.z_rabatem }} <small>z {{ t.powitanie.sklepy }}</small>{% else %}–{% endif %}
+              {%- endif -%}
+              {%- if wy %}<span class="sr"> ({{ wy == 'max' ? 'najwięcej' : 'najmniej' }})</span>{% endif -%}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row">Wszystkie sklepy<small>{{ og.sklepy }} sklepów</small></th>
+            <td>{{ og.tydzien ?? '–' }}</td>
+            <td>{{ og.oferty_proc }}%</td>
+            <td>{{ og.potwierdzenie.prosi }} <small>z {{ og.potwierdzenie.sklepy }}</small></td>
+            <td>{{ og.powitanie.z_rabatem }} <small>z {{ og.powitanie.sklepy }}</small></td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
+    <p class="pn-legenda"><span class="l-max">najwięcej w kolumnie</span><span class="l-min">najmniej w kolumnie</span></p>
+    <p class="pn-drobne">Liczę newslettery (bez maili powitalnych i potwierdzeń). „Maili w tygodniu” to typowy sklep: połowa sklepów wysyła mniej, połowa więcej. „Rabat na powitanie” liczę wśród sklepów, które przysłały mail powitalny. * Mało maili, liczby orientacyjne, bez wyróżnień kolorem.{% if d.inne_branze %} Za mało sklepów do porównania mają jeszcze: {% for b in d.inne_branze %}{{ b.nazwa|lower }} ({{ b.sklepy }}){{ loop.last ? '.' : ', ' }}{% endfor %}{% endif %}</p>
 
     {% for b in d.branze %}
-    {% set t = b.tydzien %}
-    <article class="pn-karta" id="pn-{{ b.slug }}" role="tabpanel" aria-labelledby="pn-tab-{{ b.slug }}" data-panel="{{ b.slug }}">
-      <h3>{{ b.nazwa }}</h3>
-      <p class="pn-pod">{{ b.sklepy }} sklepów, {{ b.maile }} maili, w tym {{ b.regularne }} zwykłych newsletterów (bez potwierdzenia zapisu i powitania).{% if b.malo_danych %} <b>Mało maili, więc traktuj te liczby orientacyjnie.</b>{% endif %}</p>
-      <div class="pn-kafle">
-        <div class="pn-kafel"><span>Newsletterów tygodniowo</span>
-          {% if t.mediana is not null %}<b>{{ t.mediana }}</b><p>Tyle wysyła typowy sklep. Rozrzut: od {{ t.od }} do {{ t.do }} ({{ t.sklepy }} sklepów obserwowanych co najmniej tydzień).</p>
-          {% else %}<b>–</b><p>Za krótko obserwujemy sklepy z tej branży (mniej niż tydzień).</p>{% endif %}
-        </div>
-        <div class="pn-kafel"><span>Maile sprzedażowe</span><b>{{ b.sprzedazowe_proc ?? '–' }}%</b><p>zwykłych newsletterów to oferta, rabat albo zachęta do zakupu.</p></div>
-        <div class="pn-kafel"><span>Potwierdzenie zapisu</span><b>{{ b.potwierdzenie.prosi }}<small> z {{ b.potwierdzenie.sklepy }}</small></b><p>sklepów prosi o kliknięcie w link potwierdzający{% if b.potwierdzenie.z_zacheta %}, {{ b.potwierdzenie.z_zacheta }} z rabatem w temacie tego maila{% endif %}.</p></div>
-        <div class="pn-kafel"><span>Rabat na powitanie</span>
-          {% if b.powitanie.sklepy %}<b>{{ b.powitanie.z_rabatem }}<small> z {{ b.powitanie.sklepy }}</small></b><p>sklepów z mailem powitalnym daje w nim rabat albo kod.</p>
-          {% else %}<b>–</b><p>Żaden sklep z tej branży nie przysłał maila powitalnego.</p>{% endif %}
-        </div>
-      </div>
-
+    <article class="pn-karta" id="pn-{{ b.slug }}" data-panel="{{ b.slug }}">
+      <h3>{{ b.nazwa }}: co to znaczy dla Twojego sklepu</h3>
+      <ul class="pn-wnioski">{% for z in b.wnioski %}<li>{{ z }}</li>{% endfor %}</ul>
+      {% if b.malo_danych %}<p class="pn-drobne">Mało maili z tej branży, więc traktuj te liczby orientacyjnie.</p>{% endif %}
       <div class="pn-dwie">
         <div class="pn-blok">
-          <h4>W jakie dni przychodzą</h4>
+          <h4>W jakie dni przychodzą newslettery</h4>
           <div class="pn-dni" aria-hidden="true">
-            {% for x in b.dni %}<div><em>{{ x.proc }}%</em><i style="height:{{ (x.wys * 0.78)|round }}%"></i></div>{% endfor %}
+            {% for x in b.dni %}<div><em>{{ x.proc }}%</em><i style="height:{{ (x.wys * 0.75)|round }}%"></i></div>{% endfor %}
           </div>
           <div class="pn-dni-podpis" aria-hidden="true">{% for x in b.dni %}<span>{{ x.dzien }}</span>{% endfor %}</div>
-          <p>{% if b.dni_top %}Najwięcej zwykłych newsletterów przyszło {{ b.dni_top|join(', ') }}.{% else %}Maile rozkładają się na różne dni bez wyraźnej przewagi.{% endif %}
-          {% if b.godziny_top %}Najczęstsze godziny: {{ b.godziny_top|join(', ') }}.{% else %}Godziny są rozrzucone, bez wyraźnej przewagi.{% endif %}</p>
+          <p>{% if b.dni_top %}Najwięcej przychodzi {{ b.dni_top|join(', ', ' i ') }}.{% else %}Rozkładają się na różne dni bez wyraźnej przewagi.{% endif %}</p>
         </div>
         <div class="pn-blok">
-          <h4>Co jest w tematach maili</h4>
-          <div class="pn-paski">
-            {% for p in [['słowo „rabat”', b.tematy.rabat], ['znak procentu (%)', b.tematy.procent], ['emoji', b.tematy.emoji], ['„Black” albo „Cyber” (Black Friday, Black Week…)', b.tematy.black]] %}
-            <div class="pn-pasek"><span>{{ p[0] }}</span><div><i style="width:{{ p[1] }}%"></i></div><b>{{ p[1] }}%</b></div>
-            {% endfor %}
-          </div>
-          <p class="pn-drobne">Udział wśród {{ b.regularne }} zwykłych newsletterów tej branży.</p>
-        </div>
-      </div>
-
-      <div class="pn-dwie">
-        <div class="pn-blok">
-          <h4>Programy do wysyłki maili</h4>
-          {% if b.systemy %}
-          <ul class="pn-chipy">{% for s in b.systemy %}<li>{{ s.nazwa }}<b>{{ s.sklepy }}</b></li>{% endfor %}</ul>
-          <p class="pn-drobne">Rozpoznane u {{ b.systemy_rozpoznane }} z {{ b.sklepy }} sklepów, po technicznych nagłówkach maili.</p>
-          {% else %}
-          <p class="pn-drobne">Nie udało się rozpoznać programu u sklepów z tej branży.</p>
+          <h4>Najwięcej maili przysłały</h4>
+          <p>{% for n in b.najczesciej %}{{ n.nazwa }} ({{ n.maile }}){{ loop.last ? '.' : ', ' }}{% endfor %}</p>
+          {% if b.systemy_linia %}
+          <h4 style="margin-top:16px">Programy do wysyłki</h4>
+          <p>{{ b.systemy_linia }}.</p>
           {% endif %}
         </div>
-        <div class="pn-blok">
-          <h4>Sklepy w tej branży</h4>
-          <p>{{ b.przyklady|join(', ') }}.</p>
-          <p class="pn-drobne">Najwięcej maili przysłały: {% for n in b.najczesciej %}{{ n.nazwa }} ({{ n.maile }}){{ loop.last ? '.' : ', ' }}{% endfor %}{% if b.cisza %} Do tego {{ b.cisza }} {{ b.cisza == 1 ? 'zapisany sklep nie przysłał' : 'zapisane sklepy nie przysłały' }} ani jednego maila przez co najmniej tydzień.{% endif %}</p>
-        </div>
       </div>
+      <details>
+        <summary>Pokaż wszystkie sklepy ({{ b.sklepy }})</summary>
+        <p>{{ b.przyklady|join(', ') }}.</p>
+      </details>
     </article>
     {% endfor %}
-
-    {% if d.inne_branze %}
-    <p class="pn-drobne" style="margin-top:16px">Obserwuję też sklepy z branż, w których jest ich jeszcze za mało do porównania: {% for b in d.inne_branze %}{{ b.nazwa|lower }} ({{ b.sklepy }}){{ loop.last ? '.' : ', ' }}{% endfor %}</p>
-    {% endif %}
   </section>
 
+  {% if d.ciekawostki %}
   <section id="ciekawostki">
     <div class="u-kicker">Ciekawostki</div>
-    <h2>Co widać we wszystkich branżach</h2>
+    <h2>Co jeszcze widać we wszystkich branżach</h2>
     <div class="pn-ciek">
-      {% for c in d.ciekawostki %}<div><b>{{ c.liczba }}</b><p>{{ c.tekst }}</p></div>{% endfor %}
+      {% for c in d.ciekawostki|slice(0, 4) %}<div><b>{{ c.liczba }}</b><p>{{ c.tekst }}</p></div>{% endfor %}
     </div>
   </section>
+  {% endif %}
 
   <section id="dodaj">
     <div class="u-kicker">Dodaj swój sklep</div>
@@ -208,7 +225,7 @@
       <div class="pn-sciezka">
         <span class="pn-etyk">Z zewnątrz · bez dostępu do konta</span>
         <h3>Zapiszę się do Twojego newslettera</h3>
-        <p>Podaj adres sklepu. Zapiszę się do Twojego newslettera na skrzynkę testową i przez 14 dni policzę maile tak samo jak u innych sklepów: ile ich jest, w jakie dni i o której przychodzą, co jest w tematach, czy prosisz o potwierdzenie zapisu i co jest w powitaniu. <b>Wynik porównania z Twoją branżą wyślę Ci mailem w ciągu około 14 dni.</b> Działa przy każdym programie do mailingu.</p>
+        <p>Podaj adres sklepu. Przez 14 dni policzę Twoje maile tak samo jak u innych sklepów. <b>Wynik na tle Twojej branży wyślę Ci mailem w ciągu około 14 dni.</b> Działa przy każdym programie do mailingu.</p>
         <form id="pn-form" data-klucz="{{ function('mkpk_recaptcha_site_key') }}" novalidate>
           <input type="hidden" name="zrodlo" value="porownywarka">
           <div class="pn-pulapka" aria-hidden="true"><label>Strona firmy <input type="text" name="firma_www" tabindex="-1" autocomplete="off"></label></div>
@@ -231,27 +248,26 @@
       <div class="pn-sciezka">
         <span class="pn-etyk">Od środka · GetResponse i MailerLite</span>
         <h3>Pełny audyt mailingu</h3>
-        <p>Z zewnątrz widać tylko to, co przychodzi do skrzynki. Jeśli używasz GetResponse albo MailerLite, darmowy skill do Claude Code sprawdzi Twoje konto od środka: automaty, przez które nikt nie przechodzi, maile bez liczenia sprzedaży i połączenie ze sklepem. Działa tylko w trybie odczytu, a raport po polsku zostaje na Twoim dysku.</p>
+        <p>Z zewnątrz widać tylko to, co przychodzi do skrzynki. Jeśli używasz GetResponse albo MailerLite, darmowy skill do Claude Code sprawdzi Twoje konto od środka: automaty, przez które nikt nie przechodzi, i maile bez liczenia sprzedaży. Działa tylko w trybie odczytu.</p>
         <p><a class="u-cta" href="/audyt-mailingu/?zrodlo=porownywarka">Zobacz audyt mailingu</a></p>
       </div>
     </div>
   </section>
 
+  {% if pokaz_metode %}
   <section id="metoda">
     <div class="u-kicker">Skąd te liczby</div>
     <h2>Jak liczę</h2>
     <ul class="pn-metoda">
       <li>Zapisuję się do publicznych newsletterów sklepów na jedną skrzynkę testową, tak jak zrobiłby to klient. Nie mam dostępu do kont mailingowych sklepów i widzę tylko to, co przychodzi do skrzynki.</li>
-      <li>Okres: od {{ o.od_pl }} do {{ o.do_pl }} ({{ o.dni }} dni). W tym czasie był Black Week, dlatego maili sprzedażowych jest więcej niż zwykle. Sklepy dopisywałem stopniowo, więc część z nich obserwuję krócej.</li>
-      <li>Zwykłe newslettery to wszystkie maile poza potwierdzeniem zapisu, powitaniem i przypomnieniem kodu powitalnego. Z nich liczę częstotliwość, dni, godziny, udział sprzedaży i tematy.</li>
-      <li>Newslettery tygodniowo liczę tylko dla sklepów obserwowanych co najmniej {{ d.progi.min_dni_czestotliwosc }} dni. Typowy sklep to wartość środkowa: połowa sklepów wysyła mniej, połowa więcej.</li>
-      <li>Godzina to czas, w którym mail dotarł do skrzynki, a nie czas zaplanowany przez sklep. Przy dwóch tygodniach obserwacji rozkład dni jest orientacyjny: drugi tydzień to już start Black Week.</li>
-      <li>Program do wysyłki maili rozpoznaję po technicznych nagłówkach maili. Nie zawsze się da. Usługa, która tylko dostarcza maile (np. EmailLabs), nie musi być programem, w którym sklep układa kampanie.</li>
-      <li>Branże z mniej niż {{ d.progi.min_sklepow_branzy }} sklepami podaję tylko z nazwy, bo to za mało do porównania. Nie oceniam sklepów, liczby opisują tylko to, co przyszło do skrzynki.</li>
-      <li>Nie mierzę otwarć, kliknięć ani sprzedaży (widzi je tylko sklep), SMS-ów ani maili po zakupie. Na stronie nie pokazuję tematów ani treści maili.</li>
-      <li>Liczby odświeżam po kolejnych tygodniach obserwacji. Ostatnia aktualizacja: {{ d.wygenerowano|date('d.m.Y') }}.</li>
+      <li>Okres: od {{ o.od_pl }} do {{ o.do_pl }} ({{ o.dni }} dni), w tym Black Week. Sklepy dopisywałem stopniowo, więc część z nich obserwuję krócej.</li>
+      <li>Liczę newslettery (bez maili powitalnych i potwierdzeń). Maile w tygodniu liczę tylko dla sklepów, które obserwuję od co najmniej {{ d.progi.min_dni_czestotliwosc }} dni. Typowy sklep to wartość środkowa: połowa sklepów wysyła mniej, połowa więcej.</li>
+      <li>Program do wysyłki rozpoznaję po technicznych nagłówkach maili. Nie zawsze się da.</li>
+      <li>Branże z mniej niż {{ d.progi.min_sklepow_branzy }} sklepami podaję tylko z nazwy. Nie oceniam sklepów i nie pokazuję tematów ani treści maili. Nie mierzę otwarć, kliknięć ani sprzedaży.</li>
+      <li>Ostatnia aktualizacja: {{ d.wygenerowano|date('d.m.Y') }}.</li>
     </ul>
   </section>
+  {% endif %}
 {% endif %}
 </div></div>
 
@@ -261,23 +277,25 @@ window.mkpkGa = window.mkpkGa || function (n, p) { try { window.dataLayer = wind
 	var zr = new URLSearchParams(location.search).get('zrodlo');
 	zr = zr ? zr.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 60) : '';
 
-	// Wybór branży: bez JS widać wszystkie karty, z JS jedną naraz.
-	var przyciski = document.querySelectorAll('.pn-wybor [data-branza]');
+	// Wybór branży z tabeli: bez JS widać wszystkie karty, z JS jedną naraz (pod tabelą).
+	// aria-pressed, nie aria-expanded: sdc.js motywu podpina się pod każdy [aria-expanded] jako akordeon.
+	var przyciski = document.querySelectorAll('.pn-tab [data-branza]');
+	var wiersze = document.querySelectorAll('.pn-tab [data-wiersz]');
 	var karty = document.querySelectorAll('.pn [data-panel]');
-	function pokazBranze(s, ga) {
-		przyciski.forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-branza') === s ? 'true' : 'false'); b.tabIndex = b.getAttribute('data-branza') === s ? 0 : -1; });
-		karty.forEach(function (k) { k.hidden = k.getAttribute('data-panel') !== s; });
-		if (ga) mkpkGa('porownywarka_branza', {branza: s});
+	function pokazBranze(s, klik) {
+		przyciski.forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-branza') === s ? 'true' : 'false'); });
+		wiersze.forEach(function (w) { w.classList.toggle('wybrany', w.getAttribute('data-wiersz') === s); });
+		var karta = null;
+		karty.forEach(function (k) { k.hidden = k.getAttribute('data-panel') !== s; if (!k.hidden) karta = k; });
+		if (klik) {
+			mkpkGa('porownywarka_branza', {branza: s});
+			if (karta && karta.getBoundingClientRect().top > window.innerHeight * 0.6) karta.scrollIntoView({behavior: 'smooth', block: 'start'});
+		}
 	}
 	if (przyciski.length) {
 		pokazBranze(przyciski[0].getAttribute('data-branza'), false);
-		przyciski.forEach(function (b, i) {
-			b.addEventListener('click', function () { pokazBranze(b.getAttribute('data-branza'), true); });
-			b.addEventListener('keydown', function (e) {
-				var j = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : null;
-				if (j === null) return;
-				var c = przyciski[(j + przyciski.length) % przyciski.length]; c.focus(); c.click();
-			});
+		wiersze.forEach(function (w) {
+			w.addEventListener('click', function () { pokazBranze(w.getAttribute('data-wiersz'), true); });
 		});
 	}
 

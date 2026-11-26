@@ -8,6 +8,7 @@ Porównywarka newsletterów sklepów — nowa strona na marketingkrokpokroku.pl 
 - `porownywarka/wp/`: szablon strony (Twig, styl jak /audyt-mailingu/) i mu-plugin z formularzem „Dodaj swój sklep” (zapis we Flamingo + powiadomienie do Wojtka, bez automatycznych maili do zgłaszających).
 - `porownywarka/odswiez.sh`: odświeżenie liczb jednym poleceniem. Testy: `tests/test_porownywarka.py`.
 - `docs/CONCEPTS.md`: pojęcia „zwykły newsletter”, „newsletterów tygodniowo”, „wynik porównania”.
+- Przebudowa strony po uwadze „mało przejrzyste”: jedna tabela porównawcza branż (4 kolumny + wiersz „Wszystkie sklepy” jako punkt odniesienia, kolorem najwyższa i najniższa wartość w kolumnie), po kliknięciu branży karta z 3 zdaniami wniosków, najaktywniejszymi markami, dniami wysyłki i jedną linijką programów; lista sklepów schowana. Ciekawostki: 4 zamiast 8, bez powtórzeń z tabeli. Liczby na stronie: pełne, poniżej 2 z jednym miejscem po przecinku. Sekcja „Jak liczę” ukryta flagą `pokaz_metode` w szablonie. W JSON-ie nowe pola: `tabela`, `wyroznienie`, `wnioski`, `systemy_linia`, `ogolem` (wersja pliku 2). Definicje liczb bez zmian.
 
 ## 0.3.8 — 2026-11-25
 
