@@ -44,10 +44,26 @@ def zestaw():
     return [x for x, _ in m], {k["klucz"]: k for _, k in m}, sklepy
 
 
+# Wynik monitor.podwojne_potwierdzenie() dla zestawu: Alfa i Beta proszą (Beta z rabatem w temacie),
+# Gamma ma tylko podziękowanie za potwierdzenie, Delta — nic.
+POTW = {"Alfa": {"jak": "prosba", "zacheta": False, "jezyk": "PL"},
+        "Beta": {"jak": "prosba", "zacheta": True, "jezyk": "EN"},
+        "Gamma": {"jak": "podziekowanie", "zacheta": False, "jezyk": "PL"}}
+
+# Zastępczy monitor.py do testu CLI (prawdziwy leży przy danych, poza repo).
+MONITOR_STUB = (
+    "def podwojne_potwierdzenie(maile):\n"
+    "    w = {}\n"
+    "    for m in maile:\n"
+    "        if m['typ'] == 'potwierdzenie':\n"
+    "            w[m['sklep']] = {'jak': 'prosba', 'zacheta': False, 'jezyk': 'PL'}\n"
+    "    return w\n")
+
+
 class Generator(unittest.TestCase):
     def setUp(self):
         maile, klas, sklepy = zestaw()
-        self.d = g.policz(maile, klas, sklepy, {"alfa": "EmailLabs", "beta": "nierozpoznane"})
+        self.d = g.policz(maile, klas, sklepy, {"alfa": "EmailLabs", "beta": "nierozpoznane"}, POTW)
 
     def test_okres_i_liczby(self):
         self.assertEqual(self.d["okres"]["od"], "2026-11-02")
@@ -68,7 +84,7 @@ class Generator(unittest.TestCase):
         self.assertEqual(b["tematy"]["rabat"], 67)
         self.assertEqual(b["tematy"]["emoji"], 67)
         self.assertEqual(b["tematy"]["black"], 17)
-        self.assertEqual(b["potwierdzenie"], {"prosi": 3, "z_zacheta": 0, "sklepy": 3})
+        self.assertEqual(b["potwierdzenie"], {"prosi": 3, "z_zacheta": 1, "sklepy": 3})
         self.assertEqual(b["powitanie"], {"z_rabatem": 3, "sklepy": 3})  # rabat_max wystarcza, nawet bez kodu
         self.assertEqual(b["systemy"], [{"nazwa": "EmailLabs", "sklepy": 1}])
         self.assertEqual(b["najczesciej"][0]["nazwa"], "Alfa")
@@ -93,6 +109,30 @@ class Generator(unittest.TestCase):
         tekst = json.dumps(self.d["ciekawostki"], ensure_ascii=False)
         for zakazane in ("zwykł", "rozrzut", "potwierdzenie zapisu"):
             self.assertNotIn(zakazane, tekst)
+
+    def test_podwojne_potwierdzenie(self):
+        p = self.d["podwojne"]
+        self.assertEqual((p["sklepy"], p["z_potwierdzeniem"], p["proc"], p["bez"]), (4, 3, 75, 1))
+        self.assertEqual((p["prosba"], p["tylko_podziekowanie"], p["z_zacheta"], p["po_angielsku"]), (2, 1, 1, 1))
+        self.assertEqual(p["przyklady_zachety"], ["Beta"])
+        # ta sama liczba w tabeli (wiersz „Wszystkie sklepy”) i w bloku
+        self.assertEqual(self.d["ogolem"]["potwierdzenie"], {"prosi": 3, "sklepy": 4})
+        # w branżach tylko te z kartą (co najmniej 3 sklepy) — Kawa (1 sklep) nie
+        self.assertEqual(p["branze"], [{"nazwa": "Moda", "slug": "moda", "sklepy": 3, "z_potwierdzeniem": 3, "proc": 100}])
+        self.assertIsNone(p["poprzedni"])
+
+    def test_historia(self):
+        with tempfile.TemporaryDirectory() as k:
+            plik = os.path.join(k, "pomiary.json")
+            self.assertIsNone(g.historia(plik, self.d, "2026-11-26"))
+            self.assertIsNone(g.historia(plik, self.d, "2026-11-26"))  # ten sam dzień = nadpisanie, bez „zmiany”
+            with open(plik, encoding="utf-8") as f:
+                self.assertEqual(len(json.load(f)), 1)
+            pop = g.historia(plik, self.d, "2026-11-27")
+            self.assertEqual((pop["data"], pop["data_pl"], pop["z_potwierdzeniem"], pop["sklepy"], pop["proc"]),
+                             ("2026-11-26", "26.11.2026", 3, 4, 75))
+            with open(plik, encoding="utf-8") as f:
+                self.assertEqual([x["data"] for x in json.load(f)], ["2026-11-26", "2026-11-27"])
 
     def test_mala_branza_bez_karty(self):
         self.assertEqual(self.d["inne_branze"], [{"nazwa": "Kawa", "sklepy": 1, "maile": 1}])
@@ -172,13 +212,20 @@ class Pomocnicze(unittest.TestCase):
             with open(os.path.join(k, "sklepy.json"), "w", encoding="utf-8") as f:
                 json.dump(sklepy, f)
             wy = os.path.join(k, "dane.json")
-            r = subprocess.run([sys.executable, os.path.join(KORZEN, "porownywarka", "generuj_dane.py"),
-                                "--zrodlo", k, "--wyjscie", wy], capture_output=True, text=True)
+            cmd = [sys.executable, "-I", os.path.join(KORZEN, "porownywarka", "generuj_dane.py"), "--zrodlo", k, "--wyjscie", wy]
+            r = subprocess.run(cmd, capture_output=True, text=True)
+            self.assertNotEqual(r.returncode, 0)  # bez monitor.py nie liczymy po swojemu
+            self.assertIn("monitor.py", r.stderr)
+            with open(os.path.join(k, "monitor.py"), "w", encoding="utf-8") as f:
+                f.write(MONITOR_STUB)
+            r = subprocess.run(cmd + ["--historia", os.path.join(k, "pomiary.json")], capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
             with open(wy, encoding="utf-8") as f:
                 d = json.load(f)
+            self.assertTrue(os.path.exists(os.path.join(k, "pomiary.json")))
         self.assertEqual(d["liczby"]["maile"], 13)
         self.assertIsNone(d["zrodlo_systemow"])
+        self.assertEqual((d["podwojne"]["z_potwierdzeniem"], d["podwojne"]["sklepy"]), (3, 4))
 
 
 if __name__ == "__main__":

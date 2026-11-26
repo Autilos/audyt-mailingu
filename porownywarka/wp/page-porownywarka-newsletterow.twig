@@ -1,5 +1,5 @@
 {% extends "templates/usluga.twig" %}
-{# Porównywarka newsletterów sklepów (repo Autilos/audyt-mailingu, porownywarka/wp/). 26.11.2026, v2 (przejrzystsza)
+{# Porównywarka newsletterów sklepów (repo Autilos/audyt-mailingu, porownywarka/wp/). 26.11.2026, v3 (+ podwójne potwierdzenie zapisu)
    Wszystkie liczby z jednego pliku: function('mkpk_porownywarka_dane') = uploads/mkpk-porownywarka/dane.json
    (generuje porownywarka/generuj_dane.py). Style zawężone do .usl .pn. Formularz: mu-plugins/mkpk-porownywarka.php. #}
 {% block custom_head %}
@@ -58,6 +58,19 @@
 .usl .pn details{margin-top:18px;border-top:1px solid var(--linia);padding-top:12px}
 .usl .pn summary{cursor:pointer;color:var(--zloto);font-weight:600;font-size:.95rem;min-height:32px}
 .usl .pn details p{margin:8px 0 0;font-size:.92rem;color:var(--szary)}
+/* podwójne potwierdzenie zapisu */
+.usl .pn .pn-doi{display:grid;grid-template-columns:1fr;gap:22px;margin-top:6px}
+.usl .pn .pn-doi-liczba{border:1px solid rgba(215,187,121,.35);border-top:3px solid var(--czerw);border-radius:14px;padding:20px 18px;background:linear-gradient(180deg,var(--karta),var(--tlo2))}
+.usl .pn .pn-doi-liczba b{display:block;font-size:3rem;line-height:1;color:var(--zloto);font-weight:800}
+.usl .pn .pn-doi-liczba p{margin:8px 0 0;font-size:1.02rem}
+.usl .pn .pn-doi-liczba .pn-doi-znaczy{margin-top:14px;padding-top:12px;border-top:1px solid var(--linia);font-size:.95rem}
+.usl .pn .pn-doi-br{margin:0;padding:0;list-style:none;display:grid;gap:9px}
+.usl .pn .pn-doi-br li{display:grid;grid-template-columns:7.5em 1fr 4.6em;gap:10px;align-items:center;font-size:.95rem}
+.usl .pn .pn-doi-br .pn-pasek{height:12px;border-radius:6px;background:rgba(215,187,121,.15);overflow:hidden}
+.usl .pn .pn-doi-br .pn-pasek i{display:block;height:100%;background:var(--zloto);border-radius:6px}
+.usl .pn .pn-doi-br em{font-style:normal;text-align:right;font-weight:700;color:#fff4dc;white-space:nowrap}
+.usl .pn .pn-doi-br em small{font-weight:400;color:var(--szary)}
+.usl .pn .pn-doi-br li.og{border-top:1px solid var(--linia);padding-top:9px;color:var(--zloto)}
 /* ciekawostki */
 .usl .pn .pn-ciek{display:grid;grid-template-columns:1fr;gap:12px}
 .usl .pn .pn-ciek div{border:1px solid var(--linia);border-radius:12px;padding:16px 18px;background:rgba(41,0,4,.6)}
@@ -86,6 +99,7 @@
   .usl .pn .pn-karta{padding:26px 28px}
   .usl .pn .pn-dwie{display:grid;grid-template-columns:1fr 1fr;gap:28px}
   .usl .pn .pn-ciek{grid-template-columns:repeat(2,1fr)}
+  .usl .pn .pn-doi{grid-template-columns:1fr 1.2fr;gap:32px}
   .usl .pn .pn-sciezki{grid-template-columns:1.25fr 1fr}
   .usl .pn form .pn-dwa{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .usl .pn form button{justify-self:start}
@@ -139,7 +153,7 @@
             <th scope="col">Branża</th>
             <th scope="col">Maili w tygodniu</th>
             <th scope="col">Ile to oferty i rabaty</th>
-            <th scope="col">Prosi o potwier&shy;dzenie zapisu</th>
+            <th scope="col">Potwier&shy;dzenie zapisu kliknię&shy;ciem</th>
             <th scope="col">Rabat na powitanie</th>
           </tr>
         </thead>
@@ -175,7 +189,7 @@
       </table>
     </div>
     <p class="pn-legenda"><span class="l-max">najwięcej w kolumnie</span><span class="l-min">najmniej w kolumnie</span></p>
-    <p class="pn-drobne">Liczę newslettery (bez maili powitalnych i potwierdzeń). „Maili w tygodniu” to typowy sklep: połowa sklepów wysyła mniej, połowa więcej. „Rabat na powitanie” liczę wśród sklepów, które przysłały mail powitalny. * Mało maili, liczby orientacyjne, bez wyróżnień kolorem.{% if d.inne_branze %} Za mało sklepów do porównania mają jeszcze: {% for b in d.inne_branze %}{{ b.nazwa|lower }} ({{ b.sklepy }}){{ loop.last ? '.' : ', ' }}{% endfor %}{% endif %}</p>
+    <p class="pn-drobne">Liczę newslettery (bez maili powitalnych i potwierdzeń). „Potwierdzenie zapisu kliknięciem”: ile sklepów po zapisie każe kliknąć w link w mailu, zanim zacznie wysyłać newsletter. „Maili w tygodniu” to typowy sklep: połowa sklepów wysyła mniej, połowa więcej. „Rabat na powitanie” liczę wśród sklepów, które przysłały mail powitalny. * Mało maili, liczby orientacyjne, bez wyróżnień kolorem.{% if d.inne_branze %} Za mało sklepów do porównania mają jeszcze: {% for b in d.inne_branze %}{{ b.nazwa|lower }} ({{ b.sklepy }}){{ loop.last ? '.' : ', ' }}{% endfor %}{% endif %}</p>
 
     {% for b in d.branze %}
     <article class="pn-karta" id="pn-{{ b.slug }}" data-panel="{{ b.slug }}">
@@ -207,6 +221,31 @@
     </article>
     {% endfor %}
   </section>
+
+  {% set p = d.podwojne ?? null %}
+  {% if p and p.sklepy %}
+  <section id="potwierdzenie">
+    <div class="u-kicker">Podwójne potwierdzenie zapisu</div>
+    <h2>Ile sklepów każe potwierdzić zapis kliknięciem</h2>
+    <div class="pn-doi">
+      <div class="pn-doi-liczba">
+        <b>{{ p.proc }}%</b>
+        <p>sklepów ({{ p.z_potwierdzeniem }} z {{ p.sklepy }}) po zapisie przysyła mail z linkiem, w który trzeba kliknąć, żeby zacząć dostawać newsletter. Pozostałe {{ p.bez }} od razu wysyłają powitanie albo ofertę.</p>
+        {% if p.z_zacheta %}<p>{{ p.z_zacheta }} {{ p.z_zacheta == 1 ? 'sklep kusi' : (p.z_zacheta % 10 in [2,3,4] and p.z_zacheta % 100 not in [12,13,14] ? 'sklepy kuszą' : 'sklepów kusi') }} rabatem już w temacie tego maila{% if p.przyklady_zachety %}, na przykład {{ p.przyklady_zachety|join(', ', ' i ') }}{% endif %}.</p>{% endif %}
+        {% if p.poprzedni %}<p class="pn-drobne">Poprzedni pomiar ({{ p.poprzedni.data_pl }}): {{ p.poprzedni.z_potwierdzeniem }} z {{ p.poprzedni.sklepy }} ({{ p.poprzedni.proc }}%).</p>{% endif %}
+        <p class="pn-doi-znaczy"><b style="display:inline;font-size:inherit;color:#fff4dc">Co to znaczy dla Twojego sklepu:</b> potwierdzenie kliknięciem daje czystszą bazę i mniej zgłoszeń Twoich maili jako spam, ale część osób nie kliknie w link i nie trafi na listę.</p>
+      </div>
+      <div>
+        <h3 style="font-size:1.1rem;margin:0 0 12px">W branżach</h3>
+        <ul class="pn-doi-br">
+          {% for b in p.branze %}<li><span>{{ b.nazwa }}</span><span class="pn-pasek" aria-hidden="true"><i style="width:{{ b.proc }}%"></i></span><em>{{ b.z_potwierdzeniem }} <small>z {{ b.sklepy }}</small></em></li>{% endfor %}
+          <li class="og"><span>Wszystkie</span><span class="pn-pasek" aria-hidden="true"><i style="width:{{ p.proc }}%"></i></span><em>{{ p.z_potwierdzeniem }} <small>z {{ p.sklepy }}</small></em></li>
+        </ul>
+        <p class="pn-drobne">Liczę sklepy, od których przyszedł choć jeden mail.{% if p.tylko_podziekowanie %} Wliczam też {{ p.tylko_podziekowanie }} {{ p.tylko_podziekowanie == 1 ? 'sklep' : (p.tylko_podziekowanie % 10 in [2,3,4] and p.tylko_podziekowanie % 100 not in [12,13,14] ? 'sklepy' : 'sklepów') }}, od których mam tylko podziękowanie za potwierdzenie, bo prośba przyszła, zanim zacząłem zbierać maile.{% endif %} Aktualizacja: {{ d.wygenerowano|date('d.m.Y') }}.</p>
+      </div>
+    </div>
+  </section>
+  {% endif %}
 
   {% if d.ciekawostki %}
   <section id="ciekawostki">

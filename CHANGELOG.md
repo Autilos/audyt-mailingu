@@ -1,5 +1,15 @@
 # Zmiany
 
+## 0.3.10 — 2026-11-26
+
+Porównywarka newsletterów: blok „Podwójne potwierdzenie zapisu” i odświeżanie automatem. Skill audytu bez zmian.
+
+- Jedna definicja podwójnego potwierdzenia: `generuj_dane.py` wywołuje `podwojne_potwierdzenie()` z `monitor.py` w katalogu danych (bez monitora generator się zatrzymuje). Ta sama liczba w monitorze, w tabeli branż, we wnioskach i w nowym bloku.
+- Poprawiona definicja w monitorze: liczy się prośba o kliknięcie albo podziękowanie ZA POTWIERDZENIE; zwykłe „Dziękujemy za zapisanie się” i „we confirm your subscription” już nie. Dotąd generator brał tylko klasyfikację `typ = potwierdzenie` (liczył też zwykłe powitanie, pomijał sklepy z samym podziękowaniem).
+- Nowy blok na stronie: odsetek i „x z y”, branże z kartą (co najmniej 3 sklepy), ile sklepów kusi rabatem w temacie prośby (z przykładami marek), poprzedni pomiar z historii, data aktualizacji. Bez nazw sklepów bez potwierdzenia. Kolumna tabeli: „Potwierdzenie zapisu kliknięciem”.
+- `--historia`: pomiar dopisywany do JSON-a (jeden na dzień); „poprzedni pomiar” pokazuje się dopiero, gdy jest wpis z innego dnia.
+- `odswiez.sh`: bez interakcji (BatchMode SSH, zmienne z `~/.config/mkpk-porownywarka.env`), po wgraniu sprawdza żywą stronę (HTTP 200 + liczby z pliku), dopiero wtedy zapisuje historię i linijkę w dzienniku odświeżeń. Plik JSON: wersja 3, nowy klucz `podwojne`.
+
 ## Strona /audyt-mailingu/ — 2026-11-26
 
 Skill audytu bez zmian, wersja bez zmian.

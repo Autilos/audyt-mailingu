@@ -72,7 +72,9 @@ Każde hasło znaczy w kodzie, raportach i rozmowie dokładnie to, co tu napisan
 
 **Newsletterów tygodniowo** — zwykłe newslettery sklepu podzielone przez liczbę dni obserwacji (od zapisu do końca danych) razy 7; tylko sklepy obserwowane co najmniej 7 dni. „Typowy sklep” na stronie = mediana.
 
-**Tabela porównawcza** — cztery liczby na branżę: maili w tygodniu (typowy sklep), ile to oferty i rabaty (%), ile sklepów prosi o potwierdzenie zapisu, ile sklepów z mailem powitalnym daje w nim rabat. Wiersz „Wszystkie sklepy” to punkt odniesienia. Kolorem najwyższa i najniższa wartość w kolumnie, porównana po zaokrągleniu (remisy razem); bez branż z małą liczbą maili i bez „x z y” przy y < 3. Na stronie liczby pełne, poniżej 2 z jednym miejscem po przecinku.
+**Tabela porównawcza** — cztery liczby na branżę: maili w tygodniu (typowy sklep), ile to oferty i rabaty (%), ile sklepów ma podwójne potwierdzenie zapisu, ile sklepów z mailem powitalnym daje w nim rabat. Wiersz „Wszystkie sklepy” to punkt odniesienia. Kolorem najwyższa i najniższa wartość w kolumnie, porównana po zaokrągleniu (remisy razem); bez branż z małą liczbą maili i bez „x z y” przy y < 3. Na stronie liczby pełne, poniżej 2 z jednym miejscem po przecinku.
+
+**Podwójne potwierdzenie zapisu** — sklep po zapisie każe kliknąć w link w mailu, zanim zacznie wysyłać newsletter. Liczy się prośba o kliknięcie albo podziękowanie za potwierdzenie (prośba przyszła przed startem zbierania); zwykłe „Dziękujemy za zapisanie się” nie. Jedna definicja: `podwojne_potwierdzenie()` w `monitor.py` przy danych obserwacji — z niej korzysta też strona (tabela, wnioski i blok). Mianownik: sklepy, od których przyszedł choć jeden mail. „Z rabatem w temacie” = rabat, %, kwota albo kupon w temacie prośby. „Poprzedni pomiar” = ostatni wpis historii z innego dnia.
 
 **Wnioski branży** — trzy zdania porównujące branżę z wszystkimi sklepami (rzadziej/częściej: poniżej 0,75 albo powyżej 1,33 typowej wartości ogółu; oferty: różnica ponad 5 punktów procentowych). Nie wprowadzają nowych liczb — wszystko jest w tabeli.
 
