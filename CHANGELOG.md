@@ -1,5 +1,14 @@
 # Zmiany
 
+## 0.3.9 — 2026-11-26
+
+Porównywarka newsletterów sklepów — nowa strona na marketingkrokpokroku.pl (szkic). Skill audytu bez zmian.
+
+- `porownywarka/generuj_dane.py`: jeden plik JSON z liczbami strony z danych obserwacji newsletterów (branże, newsletterów tygodniowo, dni i godziny, udział sprzedaży, słowa w tematach, potwierdzenie zapisu, rabat na powitanie, programy do wysyłki, ciekawostki). Bez tematów, treści i adresów.
+- `porownywarka/wp/`: szablon strony (Twig, styl jak /audyt-mailingu/) i mu-plugin z formularzem „Dodaj swój sklep” (zapis we Flamingo + powiadomienie do Wojtka, bez automatycznych maili do zgłaszających).
+- `porownywarka/odswiez.sh`: odświeżenie liczb jednym poleceniem. Testy: `tests/test_porownywarka.py`.
+- `docs/CONCEPTS.md`: pojęcia „zwykły newsletter”, „newsletterów tygodniowo”, „wynik porównania”.
+
 ## 0.3.8 — 2026-11-25
 
 Tylko dokumentacja — zalecenie GetResponse dotyczące klucza API. Kod i raport bez zmian.

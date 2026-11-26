@@ -65,3 +65,12 @@ Każde hasło znaczy w kodzie, raportach i rozmowie dokładnie to, co tu napisan
 **Rekomendacja** — konkretna rada tylko do wykrytego problemu, ułożona w kolejności: dane, dostarczalność, automaty (`rekomendacje.py`). Bez obietnic wzrostu w procentach i bez czasu wdrożenia; gdy seria powitalna jest dobra, raport mówi, że jest dobra.
 
 **Pewne / do sprawdzenia** — pewne jest to, co API podaje wprost albo co potwierdza niezależne źródło (np. dane sklepu). „Do sprawdzenia” to interpretacja, której API nie rozstrzyga (przyczyna braku kontaktu, klasyfikacja maili, brak automatu „nie znaleziono po nazwie”).
+
+## Porównywarka newsletterów (strona /porownywarka-newsletterow/)
+
+**Zwykły newsletter** — mail ze skrzynki obserwacyjnej, który nie jest potwierdzeniem zapisu, powitaniem ani przypomnieniem kodu powitalnego. Tylko z takich maili liczymy częstotliwość, dni, godziny, udział sprzedaży i słowa w tematach — maile startowe przychodzą wszystkie w dniu zapisu i zafałszowałyby rozkład.
+
+**Newsletterów tygodniowo** — zwykłe newslettery sklepu podzielone przez liczbę dni obserwacji (od zapisu do końca danych) razy 7; tylko sklepy obserwowane co najmniej 7 dni. „Typowy sklep” na stronie = mediana.
+
+**Wynik porównania** — mail z liczbami newslettera zgłoszonego sklepu na tle branży, wysyłany ręcznie przez Wojtka po około 14 dniach obserwacji. Formularz nie wysyła nic automatycznie do zgłaszającego.
+
