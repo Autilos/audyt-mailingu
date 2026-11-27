@@ -123,6 +123,10 @@
 {% set d = function('mkpk_porownywarka_dane') %}
 {# Sekcja „Jak liczę” — na razie ukryta (decyzja Wojtka 26.11). Przywrócenie: true. #}
 {% set pokaz_metode = false %}
+{# Pełna lista obserwowanych sklepów w kartach branż („Pokaż wszystkie sklepy”) — na razie ukryta (decyzja Wojtka 27.11). Przywrócenie: true. #}
+{% set pokaz_sklepy = false %}
+{# Nazwy sklepów w „Najwięcej maili przysłały” i w przykładach rabatu w temacie potwierdzenia — na razie ukryte, liczby zostają (decyzja Wojtka 27.11). Przywrócenie: true. #}
+{% set pokaz_marki = false %}
 <div class="usl"><div class="pn">
 {% if not d %}
   <section class="pn-hero">
@@ -206,18 +210,26 @@
           <p>{% if b.dni_top %}Najwięcej przychodzi {{ b.dni_top|join(', ', ' i ') }}.{% else %}Rozkładają się na różne dni bez wyraźnej przewagi.{% endif %}</p>
         </div>
         <div class="pn-blok">
+          {% if pokaz_marki %}
           <h4>Najwięcej maili przysłały</h4>
           <p>{% for n in b.najczesciej %}{{ n.nazwa }} ({{ n.maile }}){{ loop.last ? '.' : ', ' }}{% endfor %}</p>
+          {% elseif b.najczesciej %}
+          {% set ost = (b.najczesciej|last).maile %}
+          <h4>Najaktywniejsze sklepy</h4>
+          <p>{{ {1: 'Najaktywniejszy sklep przysłał', 2: 'Dwa najaktywniejsze sklepy przysłały kolejno', 3: 'Trzy najaktywniejsze sklepy przysłały kolejno'}[b.najczesciej|length] ?? ((b.najczesciej|length) ~ ' najaktywniejszych sklepów przysłało kolejno') }} {{ b.najczesciej|map(n => n.maile)|join(', ', ' i ') }} {{ ost == 1 ? 'mail' : (ost % 10 in [2,3,4] and ost % 100 not in [12,13,14] ? 'maile' : 'maili') }}.</p>
+          {% endif %}
           {% if b.systemy_linia %}
           <h4 style="margin-top:16px">Programy do wysyłki</h4>
           <p>{{ b.systemy_linia }}.</p>
           {% endif %}
         </div>
       </div>
+      {% if pokaz_sklepy %}
       <details>
         <summary>Pokaż wszystkie sklepy ({{ b.sklepy }})</summary>
         <p>{{ b.przyklady|join(', ') }}.</p>
       </details>
+      {% endif %}
     </article>
     {% endfor %}
   </section>
@@ -231,7 +243,7 @@
       <div class="pn-doi-liczba">
         <b>{{ p.proc }}%</b>
         <p>sklepów ({{ p.z_potwierdzeniem }} z {{ p.sklepy }}) po zapisie przysyła mail z linkiem, w który trzeba kliknąć, żeby zacząć dostawać newsletter. Pozostałe {{ p.bez }} od razu wysyłają powitanie albo ofertę.</p>
-        {% if p.z_zacheta %}<p>{{ p.z_zacheta }} {{ p.z_zacheta == 1 ? 'sklep kusi' : (p.z_zacheta % 10 in [2,3,4] and p.z_zacheta % 100 not in [12,13,14] ? 'sklepy kuszą' : 'sklepów kusi') }} rabatem już w temacie tego maila{% if p.przyklady_zachety %}, na przykład {{ p.przyklady_zachety|join(', ', ' i ') }}{% endif %}.</p>{% endif %}
+        {% if p.z_zacheta %}<p>{{ p.z_zacheta }} {{ p.z_zacheta == 1 ? 'sklep kusi' : (p.z_zacheta % 10 in [2,3,4] and p.z_zacheta % 100 not in [12,13,14] ? 'sklepy kuszą' : 'sklepów kusi') }} rabatem już w temacie tego maila{% if pokaz_marki and p.przyklady_zachety %}, na przykład {{ p.przyklady_zachety|join(', ', ' i ') }}{% endif %}.</p>{% endif %}
         {% if p.poprzedni %}<p class="pn-drobne">Poprzedni pomiar ({{ p.poprzedni.data_pl }}): {{ p.poprzedni.z_potwierdzeniem }} z {{ p.poprzedni.sklepy }} ({{ p.poprzedni.proc }}%).</p>{% endif %}
         <p class="pn-doi-znaczy"><b style="display:inline;font-size:inherit;color:#fff4dc">Co to znaczy dla Twojego sklepu:</b> potwierdzenie kliknięciem daje czystszą bazę i mniej zgłoszeń Twoich maili jako spam, ale część osób nie kliknie w link i nie trafi na listę.</p>
       </div>
