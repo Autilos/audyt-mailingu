@@ -123,6 +123,8 @@
 {% set d = function('mkpk_porownywarka_dane') %}
 {# Sekcja „Jak liczę” — na razie ukryta (decyzja Wojtka 26.11). Przywrócenie: true. #}
 {% set pokaz_metode = false %}
+{# Pełna lista obserwowanych sklepów w kartach branż („Pokaż wszystkie sklepy”) — na razie ukryta (decyzja Wojtka 27.11). Przywrócenie: true. #}
+{% set pokaz_sklepy = false %}
 <div class="usl"><div class="pn">
 {% if not d %}
   <section class="pn-hero">
@@ -214,10 +216,12 @@
           {% endif %}
         </div>
       </div>
+      {% if pokaz_sklepy %}
       <details>
         <summary>Pokaż wszystkie sklepy ({{ b.sklepy }})</summary>
         <p>{{ b.przyklady|join(', ') }}.</p>
       </details>
+      {% endif %}
     </article>
     {% endfor %}
   </section>

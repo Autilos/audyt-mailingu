@@ -30,6 +30,7 @@ Do automatu raz dziennie. Kod wyjścia ≠ 0 = coś nie przeszło (2: strona nie
 - **Wnioski** (`branze[].wnioski`) — trzy zdania z porównaniem branży do wszystkich sklepów, bez nowych liczb.
 - **Ciekawostki** — najwyżej 4, bez liczb z tabeli.
 - Sekcja „Jak liczę” jest w szablonie, ale ukryta (`{% set pokaz_metode = false %}`); `true` ją przywraca.
+- Pełna lista sklepów w kartach branż („Pokaż wszystkie sklepy”) jest w szablonie, ale ukryta (`{% set pokaz_sklepy = false %}`); `true` ją przywraca. Flaga siedzi w szablonie, więc `odswiez.sh` (wgrywa tylko JSON) jej nie cofa.
 - Karta branży tylko przy co najmniej 3 sklepach, które coś przysłały; mniejsze branże są wymienione z nazwy.
 
 ## Formularz „Dodaj swój sklep”
